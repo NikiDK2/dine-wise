@@ -693,4 +693,4 @@ router.get("/health", (req, res) => {
   });
 });
 
-export default router;
+module.exports = router;
