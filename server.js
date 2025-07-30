@@ -6,23 +6,21 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const NODE_ENV = process.env.NODE_ENV || "development";
 
-// CORS configuratie voor online deployment
-const corsOptions = {
+// CORS configuratie
+app.use(cors({
   origin: process.env.CORS_ORIGIN || "*",
   credentials: true,
   optionsSuccessStatus: 200,
-};
+}));
 
-// Middleware
-app.use(cors(corsOptions));
 app.use(express.json());
 
-// Serve static files from dist directory (voor frontend)
+// Serve static files from dist directory
 if (NODE_ENV === "production") {
   app.use(express.static(path.join(__dirname, "dist")));
 }
 
-// API Routes - voorlopig eenvoudige health check
+// API Routes
 app.get("/api/health", (req, res) => {
   res.json({
     status: "OK",
@@ -32,7 +30,6 @@ app.get("/api/health", (req, res) => {
   });
 });
 
-// Health check endpoint
 app.get("/health", (req, res) => {
   res.json({
     status: "OK",
@@ -42,18 +39,14 @@ app.get("/health", (req, res) => {
   });
 });
 
-// Serve React app voor alle andere routes (SPA routing)
+// Serve React app voor alle andere routes
 if (NODE_ENV === "production") {
-  app.get("/", (req, res) => {
-    res.sendFile(path.join(__dirname, "dist", "index.html"));
-  });
-  
-  app.get("/:path(*)", (req, res) => {
+  app.get("*", (req, res) => {
     res.sendFile(path.join(__dirname, "dist", "index.html"));
   });
 }
 
-// Error handling middleware
+// Error handling
 app.use((err, req, res, next) => {
   console.error("API Error:", err.stack);
   res.status(500).json({
