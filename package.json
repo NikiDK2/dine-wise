@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "npm ci",
+    "build": "npm ci && vite build",
     "serve": "node server.js",
     "build:dev": "vite build --mode development",
     "build:analyze": "vite build --mode analyze",
