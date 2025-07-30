@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "npm install && vite build",
+    "build:combell": "npm ci && vite build",
     "serve": "NODE_ENV=production node server.js",
     "build:dev": "vite build --mode development",
     "build:analyze": "vite build --mode analyze",
