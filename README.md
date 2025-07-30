@@ -1,73 +1,136 @@
-# Welcome to your Lovable project
+# RestoPlanner2 - Restaurant Management System
 
-## Project info
+Een moderne web-applicatie voor restaurant management, gebouwd met React, TypeScript en Supabase.
 
-**URL**: https://lovable.dev/projects/aeaf4892-8171-40cc-af7c-4549bdfcd57c
+## 🚀 Features
 
-## How can I edit this code?
+- **Reserveringen beheer**: Volledig CRUD systeem voor reserveringen
+- **Vloerplan**: Interactieve tafelindeling met drag & drop functionaliteit
+- **Klantenbeheer**: Klantprofielen en geschiedenis
+- **Wachtlijst**: Real-time wachtlijst beheer
+- **Dashboard**: Overzicht van dagelijkse activiteiten
+- **Agenda integratie**: Synchronisatie met externe agenda systemen
+- **Notificaties**: Real-time meldingen voor nieuwe reserveringen
+- **Responsive design**: Werkt perfect op desktop en mobiel
 
-There are several ways of editing your application.
+## 🛠️ Technologieën
 
-**Use Lovable**
+- **Frontend**: React 18, TypeScript, Vite
+- **UI Framework**: shadcn/ui, Tailwind CSS
+- **Backend**: Supabase (PostgreSQL, Auth, Real-time)
+- **State Management**: Zustand
+- **Deployment**: Vercel, Combell, VPS opties
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/aeaf4892-8171-40cc-af7c-4549bdfcd57c) and start prompting.
+## 📦 Installatie
 
-Changes made via Lovable will be committed automatically to this repo.
+### Vereisten
+- Node.js 18+ 
+- npm of bun
 
-**Use your preferred IDE**
+### Lokale ontwikkeling
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+```bash
+# 1. Clone de repository
+git clone https://github.com/NikiDK2/dine-wise.git
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+# 2. Ga naar de project directory
+cd dine-wise
 
-Follow these steps:
+# 3. Installeer dependencies
+npm install
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+# 4. Kopieer environment variabelen
+cp env.example .env.local
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+# 5. Configureer je Supabase credentials in .env.local
 
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# 6. Start de development server
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+De applicatie is nu beschikbaar op `http://localhost:5173`
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## 🔧 Scripts
 
-**Use GitHub Codespaces**
+```bash
+npm run dev          # Start development server
+npm run build        # Build voor productie
+npm run preview      # Preview van productie build
+npm run lint         # ESLint check
+npm run clean:modules # Verwijder node_modules en installeer opnieuw
+```
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## 🌐 Deployment
 
-## What technologies are used for this project?
+### Vercel (Aanbevolen)
+```bash
+npm run build
+# Deploy naar Vercel via GitHub integratie
+```
 
-This project is built with:
+### Combell
+Zie `COMBELL_DEPLOYMENT.md` voor gedetailleerde instructies.
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+### VPS
+Zie `VPS_DEPLOYMENT.md` voor server setup instructies.
 
-## How can I deploy this project?
+## 📁 Project Structuur
 
-Simply open [Lovable](https://lovable.dev/projects/aeaf4892-8171-40cc-af7c-4549bdfcd57c) and click on Share -> Publish.
+```
+src/
+├── components/          # React componenten
+│   ├── agenda/         # Agenda gerelateerde componenten
+│   ├── auth/           # Authenticatie componenten
+│   ├── customers/      # Klantenbeheer
+│   ├── dashboard/      # Dashboard componenten
+│   ├── floor-plan/     # Vloerplan componenten
+│   ├── layout/         # Layout componenten
+│   ├── reservations/   # Reserveringen
+│   ├── restaurant/     # Restaurant beheer
+│   ├── settings/       # Instellingen
+│   ├── tables/         # Tafelbeheer
+│   ├── ui/             # UI componenten (shadcn/ui)
+│   └── waitlist/       # Wachtlijst beheer
+├── hooks/              # Custom React hooks
+├── integrations/       # Externe integraties (Supabase)
+├── pages/              # Pagina componenten
+├── services/           # API services
+└── utils/              # Utility functies
+```
 
-## Can I connect a custom domain to my Lovable project?
+## 🔐 Environment Variabelen
 
-Yes, you can!
+Maak een `.env.local` bestand aan met:
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+```env
+VITE_SUPABASE_URL=your_supabase_url
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+VITE_AGENDA_API_URL=your_agenda_api_url
+VITE_AGENDA_API_KEY=your_agenda_api_key
+```
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+## 📚 Documentatie
+
+- [API Documentatie](AGENDA_API_README.md)
+- [Deployment Checklist](DEPLOYMENT_CHECKLIST.md)
+- [Volledige Deployment Guide](FULL_SITE_DEPLOYMENT.md)
+
+## 🤝 Bijdragen
+
+1. Fork de repository
+2. Maak een feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit je wijzigingen (`git commit -m 'Add some AmazingFeature'`)
+4. Push naar de branch (`git push origin feature/AmazingFeature`)
+5. Open een Pull Request
+
+## 📄 Licentie
+
+Dit project is privé eigendom.
+
+## 📞 Support
+
+Voor vragen of problemen, neem contact op via GitHub Issues.
+
+---
+
+**RestoPlanner2** - Modern restaurant management voor de 21e eeuw 🍽️
