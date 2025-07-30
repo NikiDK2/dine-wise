@@ -1,14 +1,9 @@
-import express from "express";
-import cors from "cors";
-import agendaRoutes from "./src/api/agendaRoutes.js";
-import path from "path";
-import { fileURLToPath } from "url";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const express = require("express");
+const cors = require("cors");
+const path = require("path");
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3000;
 const NODE_ENV = process.env.NODE_ENV || "development";
 
 // CORS configuratie voor online deployment
@@ -27,8 +22,15 @@ if (NODE_ENV === "production") {
   app.use(express.static(path.join(__dirname, "dist")));
 }
 
-// API Routes
-app.use("/api/agenda", agendaRoutes);
+// API Routes - voorlopig eenvoudige health check
+app.get("/api/health", (req, res) => {
+  res.json({
+    status: "OK",
+    message: "RestoPlanner API is actief",
+    environment: NODE_ENV,
+    timestamp: new Date().toISOString(),
+  });
+});
 
 // Health check endpoint
 app.get("/health", (req, res) => {
@@ -59,7 +61,7 @@ app.use((err, req, res, next) => {
 app.listen(PORT, () => {
   console.log(`🚀 RestoPlanner API draait op poort ${PORT}`);
   console.log(`🌍 Environment: ${NODE_ENV}`);
-  console.log(`📡 API beschikbaar op: http://localhost:${PORT}/api/agenda`);
+  console.log(`📡 API beschikbaar op: http://localhost:${PORT}/api/health`);
   console.log(`🏥 Health check: http://localhost:${PORT}/health`);
 
   if (NODE_ENV === "production") {
