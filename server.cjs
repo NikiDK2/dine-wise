@@ -41,7 +41,12 @@ app.get("/health", (req, res) => {
 
 // Serve React app voor alle andere routes
 if (NODE_ENV === "production") {
-  app.get("*", (req, res) => {
+  app.use((req, res, next) => {
+    // Skip API routes
+    if (req.path.startsWith('/api/') || req.path === '/health') {
+      return next();
+    }
+    // Serve React app for all other routes
     res.sendFile(path.join(__dirname, "dist", "index.html"));
   });
 }
