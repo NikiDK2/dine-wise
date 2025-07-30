@@ -1,0 +1,1162 @@
+import { useState, useCallback, useEffect, useMemo } from "react";
+import { Plus, MapPin, Save, RotateCcw, Edit3, Check, X } from "lucide-react";
+import { Header } from "@/components/layout/Header";
+import { Sidebar } from "@/components/layout/Sidebar";
+import { useRestaurants } from "@/hooks/useRestaurants";
+import {
+  useRestaurantTables,
+  useUpdateTable,
+  useTableStatusSubscription,
+} from "@/hooks/useTables";
+import { useActiveReservations } from "@/hooks/useReservations";
+import { useDate } from "@/components/layout/DateContext";
+import { supabase } from "@/integrations/supabase/client";
+import { CreateTableModal } from "@/components/tables/CreateTableModal";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
+import { useSearchParams } from "react-router-dom";
+import {
+  ReactFlow,
+  Background,
+  Controls,
+  useNodesState,
+  useEdgesState,
+  Node,
+  NodeChange,
+  Connection,
+  addEdge,
+} from "@xyflow/react";
+import "@xyflow/react/dist/style.css";
+import TableNode from "@/components/floor-plan/TableNode";
+import { TableCombinationModal } from "@/components/floor-plan/TableCombinationModal";
+
+const nodeTypes = {
+  table: TableNode,
+};
+
+export default function FloorPlan() {
+  const [selectedTable, setSelectedTable] = useState<string | null>(null);
+  const [hasChanges, setHasChanges] = useState(false);
+  const [isEditingTable, setIsEditingTable] = useState(false);
+  const [editingTableData, setEditingTableData] = useState({
+    table_number: "",
+    capacity: 1,
+  });
+  const [tableCombination, setTableCombination] = useState<any>(null);
+  const [showCombinationModal, setShowCombinationModal] = useState(false);
+  const { data: restaurants = [] } = useRestaurants();
+  const selectedRestaurant = restaurants[0];
+  const { data: tables = [], refetch } = useRestaurantTables(
+    selectedRestaurant?.id
+  );
+
+  // Get date from URL parameters or use global date
+  const [searchParams] = useSearchParams();
+  const dateParam = searchParams.get("date");
+  const combinationParam = searchParams.get("combination");
+  const customCombinationParam = searchParams.get("custom-combination");
+  const { selectedDate: globalDate } = useDate();
+  const selectedDate = dateParam ? new Date(dateParam) : globalDate;
+
+  console.log("FloorPlan date debug:", {
+    dateParam,
+    globalDate: globalDate?.toISOString(),
+    selectedDate: selectedDate?.toISOString(),
+    isValidDate: selectedDate instanceof Date && !isNaN(selectedDate.getTime()),
+  });
+
+  // Get reservations for the selected date
+  const { data: allReservations = [] } = useActiveReservations(
+    selectedRestaurant?.id
+  );
+
+  // Filter reservations for the selected date
+  const dayReservations = useMemo(() => {
+    const year = selectedDate.getFullYear();
+    const month = String(selectedDate.getMonth() + 1).padStart(2, "0");
+    const day = String(selectedDate.getDate()).padStart(2, "0");
+    const selectedDateString = `${year}-${month}-${day}`;
+    const filtered = allReservations.filter(
+      (r) => r.reservation_date === selectedDateString
+    );
+
+    console.log("FloorPlan dayReservations debug:", {
+      selectedDateString,
+      allReservationsCount: allReservations.length,
+      filteredCount: filtered.length,
+      allReservations: allReservations.map((r) => ({
+        id: r.id,
+        date: r.reservation_date,
+        table: r.table_id,
+        guests: r.party_size,
+        status: r.status,
+        customer_name: r.customer_name,
+        hasTableId: !!r.table_id,
+      })),
+      filteredReservations: filtered.map((r) => ({
+        id: r.id,
+        date: r.reservation_date,
+        table: r.table_id,
+        guests: r.party_size,
+        status: r.status,
+        customer_name: r.customer_name,
+        hasTableId: !!r.table_id,
+      })),
+      reservationsWithoutTable: filtered.filter((r) => !r.table_id).length,
+    });
+
+    return filtered;
+  }, [allReservations, selectedDate]);
+
+  // Subscribe to real-time table status updates
+  useTableStatusSubscription(selectedRestaurant?.id);
+  const updateTable = useUpdateTable();
+  const { toast } = useToast();
+
+  // Handle table combination from URL parameters
+  useEffect(() => {
+    if (combinationParam) {
+      try {
+        const combination = JSON.parse(decodeURIComponent(combinationParam));
+        setTableCombination(combination);
+        setShowCombinationModal(true);
+
+        toast({
+          title: "Tafel Combinatie Geladen",
+          description: `Tafels ${combination.table_numbers.join(
+            ", "
+          )} zijn gecombineerd voor ${combination.total_capacity} plaatsen.`,
+        });
+      } catch (error) {
+        console.error("Error parsing combination parameter:", error);
+      }
+    } else if (customCombinationParam === "true") {
+      setShowCombinationModal(true);
+
+      toast({
+        title: "Eigen Combinatie",
+        description: "Je kunt nu je eigen tafel combinatie instellen.",
+      });
+    }
+  }, [combinationParam, customCombinationParam, toast]);
+
+  // Auto-assign tables to reservations without table_id (disabled for now)
+  // useEffect(() => {
+  //   if (dayReservations.length > 0 && tables.length > 0) {
+  //     const reservationsWithoutTable = dayReservations.filter(
+  //       (r) => !r.table_id
+  //     );
+  //     const availableTables = tables.filter((t) => t.status === "available");
+
+  //     console.log("Auto-assign check:", {
+  //       reservationsWithoutTable: reservationsWithoutTable.length,
+  //       availableTables: availableTables.length,
+  //       reservations: reservationsWithoutTable.map((r) => ({
+  //         id: r.id,
+  //         customer: r.customer_name,
+  //         guests: r.party_size,
+  //         time: r.reservation_time,
+  //       })),
+  //       tables: availableTables.map((t) => ({
+  //         id: t.id,
+  //         number: t.table_number,
+  //         capacity: t.capacity,
+  //       })),
+  //     });
+
+  //     if (reservationsWithoutTable.length > 0 && availableTables.length > 0) {
+  //       // Simple auto-assignment: assign to first available table that fits
+  //       reservationsWithoutTable.forEach(async (reservation) => {
+  //         const suitableTable = availableTables.find(
+  //           (t) => t.capacity >= reservation.party_size
+  //         );
+  //         if (suitableTable) {
+  //           console.log(
+  //             `Auto-assigning reservation ${reservation.id} to table ${suitableTable.table_number}`
+  //           );
+  //           try {
+  //             // Update the reservation with table_id
+  //             const { error } = await supabase
+  //               .from("reservations")
+  //               .update({ table_id: suitableTable.id })
+  //               .eq("id", reservation.id);
+
+  //             if (error) {
+  //               console.error("Error auto-assigning table:", error);
+  //             } else {
+  //               console.log(
+  //                 `Successfully assigned table ${suitableTable.table_number} to reservation ${reservation.id}`
+  //               );
+  //               // Refresh data
+  //               refetch();
+  //             }
+  //           } catch (error) {
+  //             console.error("Error auto-assigning table:", error);
+  //           }
+  //         } else {
+  //           console.log(
+  //             `No suitable table found for reservation ${reservation.id} with ${reservation.party_size} guests`
+  //           );
+  //         }
+  //       });
+  //     }
+  //   }
+  // }, [dayReservations, tables, refetch]);
+
+  const [nodes, setNodes, onNodesChange] = useNodesState([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+
+  // Define handleTableStatusChange before using it in useEffect
+  const handleTableStatusChange = useCallback(
+    async (tableId: string, newStatus: string) => {
+      try {
+        await updateTable.mutateAsync({
+          id: tableId,
+          updates: { status: newStatus as any },
+        });
+        refetch();
+      } catch (error) {
+        toast({
+          title: "Fout",
+          description: "Kon tafelstatus niet bijwerken",
+          variant: "destructive",
+        });
+      }
+    },
+    [updateTable, refetch, toast]
+  );
+
+  // Convert tables to React Flow nodes
+  useEffect(() => {
+    console.log("FloorPlan useEffect debug:", {
+      tablesLength: tables.length,
+      dayReservationsLength: dayReservations.length,
+      selectedTable,
+      hasDateParam: !!dateParam,
+    });
+
+    if (tables.length > 0) {
+      const tableNodes: Node[] = tables.map((table) => {
+        // Get reservation for this table
+        const reservation = dayReservations.find(
+          (r) => r.table_id === table.id && r.status !== "cancelled"
+        );
+
+        console.log(`Table ${table.table_number} (${table.id}) reservation:`, {
+          tableId: table.id,
+          tableNumber: table.table_number,
+          tableStatus: table.status,
+          reservation: reservation
+            ? {
+                id: reservation.id,
+                customer: reservation.customer_name,
+                guests: reservation.party_size,
+                status: reservation.status,
+                time: reservation.reservation_time,
+              }
+            : null,
+        });
+
+        // Determine display status based on table status and reservations
+        let displayStatus = table.status;
+        if (table.status === "cleaning") {
+          displayStatus = "cleaning";
+        } else if (reservation) {
+          displayStatus = "reserved";
+        } else if (table.status === "occupied") {
+          displayStatus = "occupied";
+        } else {
+          displayStatus = "available";
+        }
+
+        console.log(`Table ${table.table_number} final status:`, {
+          tableNumber: table.table_number,
+          originalStatus: table.status,
+          hasReservation: !!reservation,
+          finalStatus: displayStatus,
+        });
+
+        return {
+          id: table.id,
+          type: "table",
+          position: {
+            x: (table.position_x || 0) * 100 + 100,
+            y: (table.position_y || 0) * 100 + 100,
+          },
+          data: {
+            tableNumber: table.table_number,
+            capacity: table.capacity,
+            status: displayStatus,
+            reservation: reservation
+              ? {
+                  guestName: reservation.customer_name,
+                  time: reservation.reservation_time,
+                }
+              : undefined,
+            onStatusChange: (newStatus: string) =>
+              handleTableStatusChange(table.id, newStatus),
+            onSelect: () => setSelectedTable(table.id),
+          },
+          selected: selectedTable === table.id,
+          style: {
+            width: Math.max(80, table.capacity * 20),
+            height: Math.max(80, table.capacity * 20),
+          },
+        };
+      });
+      setNodes(tableNodes);
+    } else {
+      setNodes([]);
+    }
+  }, [tables, selectedTable, dayReservations]);
+
+  const handleNodesChange = useCallback(
+    (changes: NodeChange[]) => {
+      onNodesChange(changes);
+
+      // Check if position changed
+      const hasPositionChange = changes.some(
+        (change) => change.type === "position" && change.dragging === false
+      );
+
+      if (hasPositionChange) {
+        setHasChanges(true);
+      }
+    },
+    [onNodesChange]
+  );
+
+  const handleEditTable = (table: any) => {
+    setIsEditingTable(true);
+    setEditingTableData({
+      table_number: table.table_number,
+      capacity: table.capacity,
+    });
+  };
+
+  const handleSaveTableEdit = async () => {
+    if (!selectedTable) return;
+
+    try {
+      await updateTable.mutateAsync({
+        id: selectedTable,
+        updates: {
+          table_number: editingTableData.table_number,
+          capacity: editingTableData.capacity,
+        },
+      });
+      setIsEditingTable(false);
+      refetch();
+      toast({
+        title: "Tafel Bijgewerkt",
+        description: "Tafelgegevens zijn succesvol opgeslagen.",
+      });
+    } catch (error) {
+      toast({
+        title: "Fout",
+        description: "Kon tafel niet bijwerken",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditingTable(false);
+    const table = tables.find((t) => t.id === selectedTable);
+    if (table) {
+      setEditingTableData({
+        table_number: table.table_number,
+        capacity: table.capacity,
+      });
+    }
+  };
+
+  const handleSavePositions = async () => {
+    try {
+      console.log("Saving positions for nodes:", nodes.length);
+      console.log("Available tables:", tables.length);
+
+      const updatePromises = nodes.map(async (node) => {
+        const table = tables.find((t) => t.id === node.id);
+        console.log(`Processing node ${node.id}:`, {
+          table: !!table,
+          position: node.position,
+        });
+
+        if (table) {
+          const newX = Math.round(((node.position.x - 100) / 100) * 10) / 10;
+          const newY = Math.round(((node.position.y - 100) / 100) * 10) / 10;
+
+          console.log(
+            `Table ${table.table_number} - Old: (${table.position_x}, ${table.position_y}), New: (${newX}, ${newY})`
+          );
+
+          // Always update positions, even if they seem the same
+          await updateTable.mutateAsync({
+            id: table.id,
+            updates: {
+              position_x: newX,
+              position_y: newY,
+            },
+          });
+          console.log(`Updated table ${table.table_number} position`);
+        } else {
+          console.log(`No table found for node ${node.id}`);
+        }
+      });
+
+      await Promise.all(updatePromises);
+      setHasChanges(false);
+      toast({
+        title: "Posities Opgeslagen",
+        description: "Alle tafelposities zijn succesvol opgeslagen",
+      });
+      refetch();
+    } catch (error) {
+      console.error("Save positions error:", error);
+      toast({
+        title: "Fout",
+        description: `Kon posities niet opslaan: ${error.message}`,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleResetPositions = () => {
+    if (tables.length > 0) {
+      const resetNodes = tables.map((table) => {
+        // Get reservation for this table
+        const reservation = dayReservations.find(
+          (r) => r.table_id === table.id && r.status !== "cancelled"
+        );
+
+        // Determine display status based on table status and reservations
+        let displayStatus = table.status;
+        if (table.status === "cleaning") {
+          displayStatus = "cleaning";
+        } else if (reservation) {
+          displayStatus = "reserved";
+        } else if (table.status === "occupied") {
+          displayStatus = "occupied";
+        } else {
+          displayStatus = "available";
+        }
+
+        return {
+          id: table.id,
+          type: "table",
+          position: {
+            x: (table.position_x || 0) * 100 + 100,
+            y: (table.position_y || 0) * 100 + 100,
+          },
+          data: {
+            tableNumber: table.table_number,
+            capacity: table.capacity,
+            status: displayStatus,
+            reservation: reservation
+              ? {
+                  guestName: reservation.customer_name,
+                  time: reservation.reservation_time,
+                }
+              : undefined,
+            onStatusChange: (newStatus: string) =>
+              handleTableStatusChange(table.id, newStatus),
+            onSelect: () => setSelectedTable(table.id),
+          },
+          selected: selectedTable === table.id,
+          style: {
+            width: Math.max(80, table.capacity * 20),
+            height: Math.max(80, table.capacity * 20),
+          },
+        };
+      });
+      setNodes(resetNodes);
+      setHasChanges(false);
+    }
+  };
+
+  const getStatusStats = () => {
+    const stats = {
+      available: 0,
+      occupied: 0,
+      reserved: 0,
+      cleaning: 0,
+      out_of_order: 0,
+    };
+
+    console.log("getStatusStats - analyzing tables:", {
+      totalTables: tables.length,
+      dayReservations: dayReservations.length,
+      availableTables: tables.filter((t) => t.status === "available").length,
+      reservedTables: tables.filter((t) => t.status === "reserved").length,
+      occupiedTables: tables.filter((t) => t.status === "occupied").length,
+    });
+
+    tables.forEach((table) => {
+      const reservation = dayReservations.find(
+        (r) => r.table_id === table.id && r.status !== "cancelled"
+      );
+
+      console.log(`getStatusStats - Table ${table.table_number}:`, {
+        tableId: table.id,
+        tableStatus: table.status,
+        hasReservation: !!reservation,
+        reservation: reservation
+          ? {
+              id: reservation.id,
+              customer: reservation.customer_name,
+              guests: reservation.party_size,
+              status: reservation.status,
+            }
+          : null,
+      });
+
+      if (table.status === "cleaning") {
+        stats.cleaning++;
+      } else if (table.status === "out_of_order") {
+        stats.out_of_order++;
+      } else if (reservation) {
+        stats.reserved++;
+      } else if (table.status === "occupied") {
+        stats.occupied++;
+      } else {
+        stats.available++;
+      }
+    });
+
+    console.log("getStatusStats - final stats:", stats);
+    return stats;
+  };
+
+  const statusStats = getStatusStats();
+  const totalCapacity = tables.reduce((sum, table) => sum + table.capacity, 0);
+  const selectedTableData = selectedTable
+    ? tables.find((t) => t.id === selectedTable)
+    : null;
+
+  const handleApplyTableCombination = async (
+    selectedTables: string[],
+    totalCapacity: number
+  ) => {
+    try {
+      // Update all selected tables to be part of the combination
+      const updatePromises = selectedTables.map(async (tableId) => {
+        await updateTable.mutateAsync({
+          id: tableId,
+          updates: {
+            status: "reserved",
+            // You could add additional fields like combination_id, etc.
+          },
+        });
+      });
+
+      await Promise.all(updatePromises);
+
+      // Refresh data
+      refetch();
+
+      toast({
+        title: "Combinatie Toegepast",
+        description: `Tafel combinatie van ${selectedTables.length} tafels met ${totalCapacity} plaatsen is succesvol toegepast.`,
+      });
+
+      // Clear the combination state
+      setTableCombination(null);
+      setShowCombinationModal(false);
+    } catch (error) {
+      toast({
+        title: "Fout",
+        description: "Kon tafel combinatie niet toepassen",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleAutoAssignTables = async () => {
+    try {
+      console.log("=== AUTO ASSIGN DEBUG START ===");
+      console.log("Current date:", selectedDate);
+      console.log("Total reservations for date:", dayReservations.length);
+      console.log("Total tables:", tables.length);
+
+      const reservationsWithoutTable = dayReservations.filter(
+        (r) => !r.table_id
+      );
+
+      console.log(
+        "Reservations without table:",
+        reservationsWithoutTable.length
+      );
+      console.log(
+        "All reservations for date:",
+        dayReservations.map((r) => ({
+          id: r.id,
+          customer: r.customer_name,
+          guests: r.party_size,
+          table_id: r.table_id,
+          time: r.reservation_time,
+          status: r.status,
+        }))
+      );
+
+      console.log(
+        "All tables:",
+        tables.map((t) => ({
+          id: t.id,
+          number: t.table_number,
+          capacity: t.capacity,
+          status: t.status,
+          position_x: t.position_x,
+          position_y: t.position_y,
+        }))
+      );
+
+      console.log("Table status breakdown:", {
+        available: tables.filter((t) => t.status === "available").length,
+        reserved: tables.filter((t) => t.status === "reserved").length,
+        occupied: tables.filter((t) => t.status === "occupied").length,
+        cleaning: tables.filter((t) => t.status === "cleaning").length,
+        out_of_order: tables.filter((t) => t.status === "out_of_order").length,
+      });
+
+      console.log("Manual auto-assign triggered:", {
+        reservationsWithoutTable: reservationsWithoutTable.length,
+        totalTables: tables.length,
+        availableTables: tables.filter((t) => t.status === "available").length,
+        reservedTables: tables.filter((t) => t.status === "reserved").length,
+        occupiedTables: tables.filter((t) => t.status === "occupied").length,
+        reservations: reservationsWithoutTable.map((r) => ({
+          id: r.id,
+          customer: r.customer_name,
+          guests: r.party_size,
+          time: r.reservation_time,
+        })),
+        tables: tables.map((t) => ({
+          id: t.id,
+          number: t.table_number,
+          capacity: t.capacity,
+          status: t.status,
+        })),
+      });
+
+      if (reservationsWithoutTable.length === 0) {
+        toast({
+          title: "Geen actie nodig",
+          description: "Alle reserveringen hebben al een tafel toegewezen.",
+        });
+        return;
+      }
+
+      let assignedCount = 0;
+
+      // Try to assign each reservation to a suitable table
+      for (const reservation of reservationsWithoutTable) {
+        console.log(`\n--- Processing reservation ${reservation.id} ---`);
+        console.log(`Reservation details:`, {
+          customer: reservation.customer_name,
+          guests: reservation.party_size,
+          time: reservation.reservation_time,
+          status: reservation.status,
+        });
+
+        // Find all tables that could potentially fit
+        const potentialTables = tables.filter(
+          (t) => t.capacity >= reservation.party_size
+        );
+        console.log(
+          `Potential tables (capacity >= ${reservation.party_size}):`,
+          potentialTables.map((t) => ({
+            id: t.id,
+            number: t.table_number,
+            capacity: t.capacity,
+            status: t.status,
+          }))
+        );
+
+        // Find tables that are not already assigned
+        const unassignedTables = potentialTables.filter(
+          (t) => !dayReservations.some((r) => r.table_id === t.id)
+        );
+        console.log(
+          `Unassigned tables:`,
+          unassignedTables.map((t) => ({
+            id: t.id,
+            number: t.table_number,
+            capacity: t.capacity,
+            status: t.status,
+          }))
+        );
+
+        // Find a table that fits the party size and is not already assigned
+        const suitableTable = tables.find(
+          (t) =>
+            t.capacity >= reservation.party_size &&
+            !dayReservations.some((r) => r.table_id === t.id)
+        );
+
+        if (suitableTable) {
+          console.log(
+            `✅ Found suitable table: ${suitableTable.table_number} (capacity: ${suitableTable.capacity}, status: ${suitableTable.status})`
+          );
+
+          const { error } = await supabase
+            .from("reservations")
+            .update({ table_id: suitableTable.id })
+            .eq("id", reservation.id);
+
+          if (error) {
+            console.error("❌ Error assigning table:", error);
+          } else {
+            assignedCount++;
+            console.log(
+              `✅ Successfully assigned table ${suitableTable.table_number} to reservation ${reservation.id}`
+            );
+          }
+        } else {
+          console.log(
+            `❌ No suitable table found for reservation ${reservation.id} with ${reservation.party_size} guests`
+          );
+          console.log(
+            `Available tables:`,
+            tables
+              .filter((t) => t.status === "available")
+              .map((t) => ({
+                number: t.table_number,
+                capacity: t.capacity,
+              }))
+          );
+        }
+      }
+
+      // Refresh data
+      refetch();
+
+      console.log("=== AUTO ASSIGN DEBUG END ===");
+      console.log(`Final result: ${assignedCount} tables assigned`);
+
+      if (assignedCount > 0) {
+        toast({
+          title: "Tafels Toegewezen",
+          description: `${assignedCount} reserveringen hebben een tafel gekregen.`,
+        });
+      } else {
+        toast({
+          title: "Geen geschikte tafels",
+          description:
+            "Er zijn geen geschikte tafels beschikbaar voor de reserveringen.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Error in handleAutoAssignTables:", error);
+      toast({
+        title: "Fout",
+        description: "Er is een fout opgetreden bij het toewijzen van tafels.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-background">
+      <Header />
+      <div className="flex">
+        <Sidebar />
+        <main className="flex-1 p-6">
+          <div className="max-w-7xl mx-auto space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-3xl font-bold text-foreground">
+                  Plattegrond
+                  {dateParam && (
+                    <span className="text-lg font-normal text-muted-foreground ml-2">
+                      -{" "}
+                      {selectedDate.toLocaleDateString("nl-NL", {
+                        weekday: "long",
+                        day: "numeric",
+                        month: "long",
+                        year:
+                          selectedDate.getFullYear() !==
+                          new Date().getFullYear()
+                            ? "numeric"
+                            : undefined,
+                      })}
+                    </span>
+                  )}
+                </h1>
+                <p className="text-muted-foreground">
+                  Sleep tafels om de plattegrond aan te passen
+                  {dateParam && (
+                    <span className="ml-1">
+                      • {dayReservations.length} reserveringen voor deze datum
+                    </span>
+                  )}
+                </p>
+              </div>
+              <div className="flex items-center space-x-2">
+                {hasChanges && (
+                  <>
+                    <Button variant="outline" onClick={handleResetPositions}>
+                      <RotateCcw className="h-4 w-4 mr-2" />
+                      Reset
+                    </Button>
+                    <Button onClick={handleSavePositions}>
+                      <Save className="h-4 w-4 mr-2" />
+                      Posities Opslaan
+                    </Button>
+                  </>
+                )}
+                <Button
+                  variant="outline"
+                  onClick={handleAutoAssignTables}
+                  className="bg-blue-50 hover:bg-blue-100"
+                >
+                  <Check className="h-4 w-4 mr-2" />
+                  Tafels Auto-Toewijzen
+                </Button>
+                {selectedRestaurant && (
+                  <CreateTableModal restaurantId={selectedRestaurant.id} />
+                )}
+              </div>
+            </div>
+
+            {/* Statistics */}
+            <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium">
+                    Totaal Tafels
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{tables.length}</div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium">
+                    Capaciteit
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{totalCapacity}</div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-green-600">
+                    Beschikbaar
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">
+                    {statusStats.available}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-red-600">
+                    Bezet
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">
+                    {statusStats.occupied}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-yellow-600">
+                    Gereserveerd
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">
+                    {statusStats.reserved}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-gray-600">
+                    Onderhoud
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">
+                    {statusStats.cleaning + statusStats.out_of_order}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+              {/* Interactive Floor Plan */}
+              <div className="lg:col-span-3">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center space-x-2">
+                      <MapPin className="h-5 w-5" />
+                      <span>Interactieve Plattegrond</span>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    <div className="h-[600px] border rounded-lg overflow-hidden">
+                      {tables.length === 0 ? (
+                        <div className="flex items-center justify-center h-full bg-gray-50">
+                          <div className="text-center text-muted-foreground">
+                            <MapPin className="h-12 w-12 mx-auto mb-4" />
+                            <h3 className="text-lg font-semibold mb-2">
+                              Geen tafels gevonden
+                            </h3>
+                            <p className="mb-4">
+                              Voeg uw eerste tafel toe om te beginnen.
+                            </p>
+                            <div className="text-xs text-muted-foreground mb-4">
+                              Debug: restaurants={restaurants.length}, tables=
+                              {tables.length}, restaurant=
+                              {selectedRestaurant?.id}
+                            </div>
+                            {selectedRestaurant && (
+                              <CreateTableModal
+                                restaurantId={selectedRestaurant.id}
+                              />
+                            )}
+                          </div>
+                        </div>
+                      ) : (
+                        <ReactFlow
+                          nodes={nodes}
+                          edges={edges}
+                          onNodesChange={handleNodesChange}
+                          onEdgesChange={onEdgesChange}
+                          nodeTypes={nodeTypes}
+                          fitView
+                          style={{ backgroundColor: "#F7F9FB" }}
+                          nodesDraggable={true}
+                          nodesConnectable={false}
+                          elementsSelectable={true}
+                        >
+                          <Background />
+                          <Controls />
+                        </ReactFlow>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Table Details Panel */}
+              <div className="space-y-6">
+                {selectedTableData && (
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between">
+                      <CardTitle>Tafel Details</CardTitle>
+                      {!isEditingTable && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEditTable(selectedTableData)}
+                        >
+                          <Edit3 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {isEditingTable ? (
+                        <>
+                          <div className="space-y-2">
+                            <Label htmlFor="table_number">Tafelnummer</Label>
+                            <Input
+                              id="table_number"
+                              value={editingTableData.table_number}
+                              onChange={(e) =>
+                                setEditingTableData((prev) => ({
+                                  ...prev,
+                                  table_number: e.target.value,
+                                }))
+                              }
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="capacity">
+                              Capaciteit (personen)
+                            </Label>
+                            <Input
+                              id="capacity"
+                              type="number"
+                              min="1"
+                              max="20"
+                              value={editingTableData.capacity}
+                              onChange={(e) =>
+                                setEditingTableData((prev) => ({
+                                  ...prev,
+                                  capacity: parseInt(e.target.value) || 1,
+                                }))
+                              }
+                            />
+                          </div>
+
+                          <div className="flex space-x-2">
+                            <Button
+                              size="sm"
+                              onClick={handleSaveTableEdit}
+                              className="flex-1"
+                            >
+                              <Check className="h-4 w-4 mr-2" />
+                              Opslaan
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={handleCancelEdit}
+                              className="flex-1"
+                            >
+                              <X className="h-4 w-4 mr-2" />
+                              Annuleren
+                            </Button>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div>
+                            <h3 className="font-semibold text-lg">
+                              {selectedTableData.table_number}
+                            </h3>
+                            <p className="text-muted-foreground">
+                              Capaciteit: {selectedTableData.capacity} personen
+                            </p>
+                          </div>
+                        </>
+                      )}
+
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Status</label>
+                        <Select
+                          value={selectedTableData.status}
+                          onValueChange={(value) =>
+                            handleTableStatusChange(selectedTableData.id, value)
+                          }
+                          disabled={isEditingTable}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="available">
+                              Beschikbaar
+                            </SelectItem>
+                            <SelectItem value="occupied">Bezet</SelectItem>
+                            <SelectItem value="reserved">
+                              Gereserveerd
+                            </SelectItem>
+                            <SelectItem value="cleaning">
+                              Schoonmaken
+                            </SelectItem>
+                            <SelectItem value="out_of_order">
+                              Buiten Dienst
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {!isEditingTable && (
+                        <div className="pt-4 border-t">
+                          <div className="text-sm text-muted-foreground space-y-1">
+                            <p>
+                              Positie: ({selectedTableData.position_x || 0},{" "}
+                              {selectedTableData.position_y || 0})
+                            </p>
+                            <p>
+                              Aangemaakt:{" "}
+                              {new Date(
+                                selectedTableData.created_at
+                              ).toLocaleDateString("nl-NL")}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Legend */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Status Legenda</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <div className="w-4 h-4 rounded bg-green-500" />
+                      <span className="text-sm">Beschikbaar</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <div className="w-4 h-4 rounded bg-red-500" />
+                      <span className="text-sm">Bezet</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <div className="w-4 h-4 rounded bg-yellow-500" />
+                      <span className="text-sm">Gereserveerd</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <div className="w-4 h-4 rounded bg-blue-500" />
+                      <span className="text-sm">Schoonmaken</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <div className="w-4 h-4 rounded bg-gray-500" />
+                      <span className="text-sm">Buiten Dienst</span>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Instructions */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Instructies</CardTitle>
+                  </CardHeader>
+                  <CardContent className="text-sm text-muted-foreground space-y-2">
+                    <p>• Sleep tafels om ze te verplaatsen</p>
+                    <p>• Klik op een tafel om details te bekijken</p>
+                    <p>• Gebruik de knoppen om posities op te slaan</p>
+                    <p>• Zoom in/uit met het muiswiel</p>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+
+      {/* Table Combination Modal */}
+      <TableCombinationModal
+        isOpen={showCombinationModal}
+        onClose={() => {
+          setShowCombinationModal(false);
+          setTableCombination(null);
+        }}
+        combination={tableCombination}
+        tables={tables}
+        onApplyCombination={handleApplyTableCombination}
+      />
+    </div>
+  );
+}
