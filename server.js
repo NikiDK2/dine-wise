@@ -8,7 +8,7 @@ const NODE_ENV = process.env.NODE_ENV || "development";
 
 // CORS configuratie voor online deployment
 const corsOptions = {
-  origin: process.env.CORS_ORIGIN || "*", // In productie: specifieke domain
+  origin: process.env.CORS_ORIGIN || "*",
   credentials: true,
   optionsSuccessStatus: 200,
 };
@@ -44,7 +44,11 @@ app.get("/health", (req, res) => {
 
 // Serve React app voor alle andere routes (SPA routing)
 if (NODE_ENV === "production") {
-  app.get("*", (req, res) => {
+  app.get("/", (req, res) => {
+    res.sendFile(path.join(__dirname, "dist", "index.html"));
+  });
+  
+  app.get("/:path(*)", (req, res) => {
     res.sendFile(path.join(__dirname, "dist", "index.html"));
   });
 }
