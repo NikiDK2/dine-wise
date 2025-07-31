@@ -1,7 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
-const agendaRoutes = require("./src/api/agendaRoutes");
+// const agendaRoutes = require("./src/api/agendaRoutes"); // Tijdelijk uitgeschakeld
 
 const app = express();
 const PORT = process.env.PORT || 3001;
