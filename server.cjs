@@ -39,49 +39,9 @@ app.get("/health", (req, res) => {
   });
 });
 
-// Serve React app voor alle andere routes (simplified)
+// Serve React app voor alle andere routes (minimal approach)
 if (NODE_ENV === "production") {
   app.get("/", (req, res) => {
-    res.sendFile(path.join(__dirname, "dist", "index.html"));
-  });
-  
-  app.get("/dashboard", (req, res) => {
-    res.sendFile(path.join(__dirname, "dist", "index.html"));
-  });
-  
-  app.get("/reservations", (req, res) => {
-    res.sendFile(path.join(__dirname, "dist", "index.html"));
-  });
-  
-  app.get("/floor-plan", (req, res) => {
-    res.sendFile(path.join(__dirname, "dist", "index.html"));
-  });
-  
-  app.get("/guests", (req, res) => {
-    res.sendFile(path.join(__dirname, "dist", "index.html"));
-  });
-  
-  app.get("/payments", (req, res) => {
-    res.sendFile(path.join(__dirname, "dist", "index.html"));
-  });
-  
-  app.get("/reports", (req, res) => {
-    res.sendFile(path.join(__dirname, "dist", "index.html"));
-  });
-  
-  app.get("/reviews", (req, res) => {
-    res.sendFile(path.join(__dirname, "dist", "index.html"));
-  });
-  
-  app.get("/settings", (req, res) => {
-    res.sendFile(path.join(__dirname, "dist", "index.html"));
-  });
-  
-  app.get("/waitlist", (req, res) => {
-    res.sendFile(path.join(__dirname, "dist", "index.html"));
-  });
-  
-  app.get("/agenda", (req, res) => {
     res.sendFile(path.join(__dirname, "dist", "index.html"));
   });
 }

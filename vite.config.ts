@@ -5,6 +5,8 @@ import { resolve } from "path";
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
+  // Base path voor subdirectory deployment
+  base: "/RestPlanner/",
   resolve: {
     alias: {
       "@": resolve(__dirname, "./src"),
@@ -13,14 +15,30 @@ export default defineConfig({
   build: {
     // Eenvoudige optimalisaties zonder terser
     minify: "esbuild",
+    // Verhoog chunk size warning limit
+    chunkSizeWarningLimit: 1000,
     rollupOptions: {
       output: {
-        // Split chunks voor betere caching
+        // Verbeterde chunk splitting voor betere caching
         manualChunks: {
           vendor: ["react", "react-dom"],
           router: ["react-router-dom"],
-          ui: ["@radix-ui/react-dialog", "@radix-ui/react-dropdown-menu"],
-          utils: ["date-fns", "clsx", "class-variance-authority"],
+          ui: [
+            "@radix-ui/react-dialog",
+            "@radix-ui/react-dropdown-menu",
+            "@radix-ui/react-select",
+            "@radix-ui/react-tabs",
+            "@radix-ui/react-toast",
+          ],
+          utils: [
+            "date-fns",
+            "clsx",
+            "class-variance-authority",
+            "tailwind-merge",
+          ],
+          supabase: ["@supabase/supabase-js"],
+          charts: ["recharts"],
+          forms: ["react-hook-form", "@hookform/resolvers", "zod"],
         },
         // Kleinere chunk namen
         chunkFileNames: "assets/[name]-[hash].js",

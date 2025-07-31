@@ -25,6 +25,8 @@
    - **Branch**: `main`
    - **Build Command**: `npm run build`
    - **Serve Command**: `npm run serve`
+   - **Base Path**: `/RestPlanner`
+   - **Domain**: `innovationstudio.be`
 
 ### Stap 2: Environment Variabelen Instellen
 
@@ -35,8 +37,8 @@ NODE_ENV=production
 VITE_SUPABASE_URL=https://uhrwgjwgdgpgrzbdodgr.supabase.co
 VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVocndnandnZGdwZ3J6YmRvZGdyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM2MDk1MDgsImV4cCI6MjA2OTE4NTUwOH0.GrgI-4xwg66tfBBNIjkil5nNEqawiPHMBcBRETM1sBU
 PORT=3001
-API_BASE_URL=https://your-domain.com
-CORS_ORIGIN=https://your-domain.com
+API_BASE_URL=https://innovationstudio.be
+CORS_ORIGIN=https://innovationstudio.be
 ```
 
 ### Stap 3: Build Configuratie

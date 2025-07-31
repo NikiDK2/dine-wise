@@ -1,0 +1,24 @@
+# RestPlanner Apache Configuration
+# Redirect alle requests naar de RestPlanner subdirectory
+
+RewriteEngine On
+
+# Als de request niet naar /RestPlanner gaat, redirect
+RewriteCond %{REQUEST_URI} !^/RestPlanner
+RewriteCond %{REQUEST_URI} !^/api
+RewriteCond %{REQUEST_URI} !^/health
+RewriteRule ^(.*)$ /RestPlanner/$1 [L,R=301]
+
+# Voor API routes, laat ze door
+RewriteCond %{REQUEST_URI} ^/api
+RewriteRule ^(.*)$ - [L]
+
+# Voor health checks, laat ze door
+RewriteCond %{REQUEST_URI} ^/health
+RewriteRule ^(.*)$ - [L]
+
+# Voor RestPlanner routes, serve de React app
+RewriteCond %{REQUEST_URI} ^/RestPlanner
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^RestPlanner/(.*)$ /RestPlanner/index.html [L] 
