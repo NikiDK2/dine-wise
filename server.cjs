@@ -53,53 +53,8 @@ try {
 
 // Serve React app voor specifieke frontend routes
 if (NODE_ENV === "production") {
-  // Expliciete routes voor React app met RestPlanner prefix
-  app.get("/RestPlanner", (req, res) => {
-    res.sendFile(path.join(__dirname, "dist", "index.html"));
-  });
-
-  app.get("/RestPlanner/auth", (req, res) => {
-    res.sendFile(path.join(__dirname, "dist", "index.html"));
-  });
-
-  app.get("/RestPlanner/reservations", (req, res) => {
-    res.sendFile(path.join(__dirname, "dist", "index.html"));
-  });
-
-  app.get("/RestPlanner/floor-plan", (req, res) => {
-    res.sendFile(path.join(__dirname, "dist", "index.html"));
-  });
-
-  app.get("/RestPlanner/guests", (req, res) => {
-    res.sendFile(path.join(__dirname, "dist", "index.html"));
-  });
-
-  app.get("/RestPlanner/waitlist", (req, res) => {
-    res.sendFile(path.join(__dirname, "dist", "index.html"));
-  });
-
-  app.get("/RestPlanner/payments", (req, res) => {
-    res.sendFile(path.join(__dirname, "dist", "index.html"));
-  });
-
-  app.get("/RestPlanner/reviews", (req, res) => {
-    res.sendFile(path.join(__dirname, "dist", "index.html"));
-  });
-
-  app.get("/RestPlanner/reports", (req, res) => {
-    res.sendFile(path.join(__dirname, "dist", "index.html"));
-  });
-
-  app.get("/RestPlanner/settings", (req, res) => {
-    res.sendFile(path.join(__dirname, "dist", "index.html"));
-  });
-
-  app.get("/RestPlanner/agenda", (req, res) => {
-    res.sendFile(path.join(__dirname, "dist", "index.html"));
-  });
-
-  // Catch-all voor RestPlanner routes
-  app.get("/RestPlanner/*", (req, res) => {
+  // Eenvoudige catch-all voor RestPlanner routes
+  app.get("/RestPlanner*", (req, res) => {
     res.sendFile(path.join(__dirname, "dist", "index.html"));
   });
 }
