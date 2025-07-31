@@ -44,8 +44,9 @@ app.get("/health", (req, res) => {
 
 // Agenda API routes - MOET voor de frontend routes komen
 try {
-  app.use("/api/agenda", agendaRoutes);
-  console.log("✅ Agenda routes succesvol geladen");
+  // Tijdelijk uitgeschakeld om path-to-regexp error te debuggen
+  // app.use("/api/agenda", agendaRoutes);
+  console.log("✅ Agenda routes tijdelijk uitgeschakeld voor debugging");
 } catch (error) {
   console.error("❌ Fout bij laden agenda routes:", error);
 }
