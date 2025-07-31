@@ -4,7 +4,7 @@ const path = require("path");
 const agendaRoutes = require("./src/api/agendaRoutes");
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
 const NODE_ENV = process.env.NODE_ENV || "development";
 
 // CORS configuratie
@@ -43,7 +43,12 @@ app.get("/health", (req, res) => {
 });
 
 // Agenda API routes - MOET voor de frontend routes komen
-app.use("/api/agenda", agendaRoutes);
+try {
+  app.use("/api/agenda", agendaRoutes);
+  console.log("✅ Agenda routes succesvol geladen");
+} catch (error) {
+  console.error("❌ Fout bij laden agenda routes:", error);
+}
 
 // Serve React app voor specifieke frontend routes
 if (NODE_ENV === "production") {
