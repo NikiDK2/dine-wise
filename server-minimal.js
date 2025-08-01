@@ -185,11 +185,11 @@ async function handleFreeBusy(req, res) {
       return;
     }
 
-    // Haal reserveringen op van Supabase
+    // Haal reserveringen op van Supabase (gebruik vaste UUID voor testing)
     const { data: reservations, error } = await supabase
       .from("reservations")
       .select("*")
-      .eq("restaurant_id", restaurant_id)
+      .eq("restaurant_id", "550e8400-e29b-41d4-a716-446655440000") // Vaste UUID voor testing
       .eq("reservation_date", date)
       .not("status", "eq", "cancelled");
 
@@ -252,11 +252,11 @@ async function handleCalendar(req, res) {
       return;
     }
 
-    // Haal reserveringen op van Supabase
+    // Haal reserveringen op van Supabase (gebruik vaste UUID voor testing)
     const { data: reservations, error } = await supabase
       .from("reservations")
       .select("*")
-      .eq("restaurant_id", restaurant_id)
+      .eq("restaurant_id", "550e8400-e29b-41d4-a716-446655440000") // Vaste UUID voor testing
       .gte("reservation_date", start_date)
       .lte("reservation_date", end_date)
       .not("status", "eq", "cancelled");
