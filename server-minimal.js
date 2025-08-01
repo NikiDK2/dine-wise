@@ -8,8 +8,8 @@ const RESTAURANT_ID = process.env.RESTAURANT_ID || "550e8400-e29b-41d4-a716-4466
 
 // Supabase client configuratie
 const supabaseUrl = process.env.VITE_SUPABASE_URL || "https://uhrwgjwgdgpgrzbdodgr.supabase.co";
-// Gebruik anonieme key (werkt voor publieke data)
-const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVocndnandnZGdwZ3J6YmRvZGdyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM2MDk1MDgsImV4cCI6MjA2OTE4NTUwOH0.GrgI-4xwg66tfBBNIjkil5nNEqawiPHMBcBRETM1sBU";
+// Gebruik service role key voor volledige database toegang
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "sb_secret_KLpT35vdk51lib-LeKW8iw_splqhZW-";
 
 const supabase = createClient(supabaseUrl, supabaseKey, {
   auth: {
