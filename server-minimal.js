@@ -129,6 +129,12 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // 5. GET /api/restaurant/capacity - Check restaurant capaciteit
+  if (req.url === "/api/restaurant/capacity" && req.method === "GET") {
+    handleGetRestaurantCapacity(req, res);
+    return;
+  }
+
   // Serve static files
   let filePath = req.url;
   if (filePath === "/" || filePath === "") {
@@ -678,6 +684,62 @@ function generateAlternativeTimes(requestedTime) {
   }
   
   return alternatives;
+}
+
+// Check restaurant capaciteit
+async function handleGetRestaurantCapacity(req, res) {
+  try {
+    // Gebruik vaste restaurant ID
+    const restaurantId = RESTAURANT_ID;
+
+    // Haal alle tafels op van het restaurant
+    const { data: tables, error: tablesError } = await supabase
+      .from('restaurant_tables')
+      .select('id, table_number, capacity, status')
+      .eq('restaurant_id', restaurantId)
+      .eq('is_active', true);
+
+    if (tablesError) {
+      console.error("Supabase error:", tablesError);
+      res.writeHead(500, { "Content-Type": "application/json" });
+      res.end(
+        JSON.stringify({
+          success: false,
+          error: "Database fout",
+          details: tablesError.message,
+        })
+      );
+      return;
+    }
+
+    // Bereken totale capaciteit
+    const totalCapacity = tables.reduce((sum, table) => sum + table.capacity, 0);
+    const availableTables = tables.filter(table => table.status === 'available').length;
+    const totalTables = tables.length;
+
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(
+      JSON.stringify({
+        success: true,
+        restaurant_id: restaurantId,
+        total_capacity: totalCapacity,
+        total_tables: totalTables,
+        available_tables: availableTables,
+        tables: tables,
+        message: `Restaurant capaciteit: ${totalCapacity} personen (${totalTables} tafels)`,
+      })
+    );
+  } catch (error) {
+    console.error("Error in get restaurant capacity:", error);
+    res.writeHead(500, { "Content-Type": "application/json" });
+    res.end(
+      JSON.stringify({
+        success: false,
+        error: "Server fout",
+        details: error.message,
+      })
+    );
+  }
 }
 
 server.listen(PORT, () => {
