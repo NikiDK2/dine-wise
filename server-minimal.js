@@ -185,11 +185,33 @@ async function handleFreeBusy(req, res) {
       return;
     }
 
-    // Haal reserveringen op van Supabase (gebruik vaste UUID voor testing)
+    // Haal eerst het eerste restaurant op uit de database
+    const { data: restaurants, error: restaurantError } = await supabase
+      .from('restaurants')
+      .select('id')
+      .limit(1)
+      .order('created_at', { ascending: false });
+
+    if (restaurantError || !restaurants || restaurants.length === 0) {
+      console.error("Geen restaurants gevonden:", restaurantError);
+      res.writeHead(500, { "Content-Type": "application/json" });
+      res.end(
+        JSON.stringify({
+          success: false,
+          error: "Geen restaurants gevonden in database",
+          details: restaurantError?.message || "Database is leeg",
+        })
+      );
+      return;
+    }
+
+    const restaurantId = restaurants[0].id;
+
+    // Haal reserveringen op van Supabase met bestaande restaurant
     const { data: reservations, error } = await supabase
       .from("reservations")
       .select("*")
-      .eq("restaurant_id", "550e8400-e29b-41d4-a716-446655440000") // Vaste UUID voor testing
+      .eq("restaurant_id", restaurantId) // Gebruik bestaande restaurant ID
       .eq("reservation_date", date)
       .not("status", "eq", "cancelled");
 
@@ -252,11 +274,33 @@ async function handleCalendar(req, res) {
       return;
     }
 
-    // Haal reserveringen op van Supabase (gebruik vaste UUID voor testing)
+    // Haal eerst het eerste restaurant op uit de database
+    const { data: restaurants, error: restaurantError } = await supabase
+      .from('restaurants')
+      .select('id')
+      .limit(1)
+      .order('created_at', { ascending: false });
+
+    if (restaurantError || !restaurants || restaurants.length === 0) {
+      console.error("Geen restaurants gevonden:", restaurantError);
+      res.writeHead(500, { "Content-Type": "application/json" });
+      res.end(
+        JSON.stringify({
+          success: false,
+          error: "Geen restaurants gevonden in database",
+          details: restaurantError?.message || "Database is leeg",
+        })
+      );
+      return;
+    }
+
+    const restaurantId = restaurants[0].id;
+
+    // Haal reserveringen op van Supabase met bestaande restaurant
     const { data: reservations, error } = await supabase
       .from("reservations")
       .select("*")
-      .eq("restaurant_id", "550e8400-e29b-41d4-a716-446655440000") // Vaste UUID voor testing
+      .eq("restaurant_id", restaurantId) // Gebruik bestaande restaurant ID
       .gte("reservation_date", start_date)
       .lte("reservation_date", end_date)
       .not("status", "eq", "cancelled");
@@ -319,11 +363,33 @@ async function handleCheckAvailability(req, res) {
       return;
     }
 
-    // Gebruik echte Supabase database
+    // Haal eerst het eerste restaurant op uit de database
+    const { data: restaurants, error: restaurantError } = await supabase
+      .from('restaurants')
+      .select('id')
+      .limit(1)
+      .order('created_at', { ascending: false });
+
+    if (restaurantError || !restaurants || restaurants.length === 0) {
+      console.error("Geen restaurants gevonden:", restaurantError);
+      res.writeHead(500, { "Content-Type": "application/json" });
+      res.end(
+        JSON.stringify({
+          success: false,
+          error: "Geen restaurants gevonden in database",
+          details: restaurantError?.message || "Database is leeg",
+        })
+      );
+      return;
+    }
+
+    const restaurantId = restaurants[0].id;
+
+    // Gebruik echte Supabase database met bestaande restaurant
     const { data: conflictingReservations, error } = await supabase
       .from('reservations')
       .select('id, customer_name, reservation_time, party_size')
-      .eq('restaurant_id', '550e8400-e29b-41d4-a716-446655440000') // Vaste UUID voor testing
+      .eq('restaurant_id', restaurantId) // Gebruik bestaande restaurant ID
       .eq('reservation_date', requested_date)
       .eq('reservation_time', requested_time)
       .not('status', 'eq', 'cancelled');
@@ -398,11 +464,33 @@ async function handleBookReservation(req, res) {
       return;
     }
 
-    // Gebruik echte Supabase database
+        // Haal eerst het eerste restaurant op uit de database
+    const { data: restaurants, error: restaurantError } = await supabase
+      .from('restaurants')
+      .select('id')
+      .limit(1)
+      .order('created_at', { ascending: false });
+
+    if (restaurantError || !restaurants || restaurants.length === 0) {
+      console.error("Geen restaurants gevonden:", restaurantError);
+      res.writeHead(500, { "Content-Type": "application/json" });
+      res.end(
+        JSON.stringify({
+          success: false,
+          error: "Geen restaurants gevonden in database",
+          details: restaurantError?.message || "Database is leeg",
+        })
+      );
+      return;
+    }
+
+    const restaurantId = restaurants[0].id;
+
+    // Gebruik echte Supabase database met bestaande restaurant
     const { data: newReservation, error } = await supabase
       .from('reservations')
       .insert({
-        restaurant_id: '550e8400-e29b-41d4-a716-446655440000', // Vaste UUID voor testing
+        restaurant_id: restaurantId, // Gebruik bestaande restaurant ID
         reservation_date,
         reservation_time,
         customer_name,
