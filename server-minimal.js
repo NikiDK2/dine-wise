@@ -355,12 +355,36 @@ async function handleCheckAvailability(req, res) {
     // Gebruik vaste restaurant ID
     const restaurantId = RESTAURANT_ID;
 
-    // 1. Haal restaurant instellingen op
-    const { data: restaurant, error: restaurantError } = await supabase
+    // 1. Haal restaurant instellingen op (of gebruik defaults als restaurant niet bestaat)
+    let { data: restaurant, error: restaurantError } = await supabase
       .from('restaurants')
       .select('id, name, opening_hours, settings')
       .eq('id', restaurantId)
       .single();
+
+    if (restaurantError) {
+      console.log("Restaurant niet gevonden, gebruik defaults:", restaurantError.message);
+      // Gebruik default restaurant instellingen
+      restaurant = {
+        id: restaurantId,
+        name: "Default Restaurant",
+        opening_hours: {
+          monday: { open: "17:00", close: "22:00" },
+          tuesday: { open: "17:00", close: "22:00" },
+          wednesday: { open: "17:00", close: "22:00" },
+          thursday: { open: "17:00", close: "22:00" },
+          friday: { open: "17:00", close: "23:00" },
+          saturday: { open: "17:00", close: "23:00" },
+          sunday: { open: "17:00", close: "22:00" }
+        },
+        settings: {
+          max_party_size: 20,
+          min_party_size: 1,
+          max_reservations_per_slot: 10,
+          reservation_duration_minutes: 120
+        }
+      };
+    }
 
     if (restaurantError) {
       console.error("Supabase error:", restaurantError);
