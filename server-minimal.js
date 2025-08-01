@@ -319,9 +319,29 @@ async function handleCheckAvailability(req, res) {
       return;
     }
 
-    // Voor nu: gebruik demo data omdat we geen echte restaurant hebben
-    // Later: vervang door echte database query
-    const isAvailable = Math.random() > 0.3; // 70% kans dat beschikbaar is
+    // Gebruik echte Supabase database
+    const { data: conflictingReservations, error } = await supabase
+      .from('reservations')
+      .select('id, customer_name, reservation_time, party_size')
+      .eq('restaurant_id', '550e8400-e29b-41d4-a716-446655440000') // Vaste UUID voor testing
+      .eq('reservation_date', requested_date)
+      .eq('reservation_time', requested_time)
+      .not('status', 'eq', 'cancelled');
+
+    if (error) {
+      console.error("Supabase error:", error);
+      res.writeHead(500, { "Content-Type": "application/json" });
+      res.end(
+        JSON.stringify({
+          success: false,
+          error: "Database fout",
+          details: error.message,
+        })
+      );
+      return;
+    }
+
+    const isAvailable = conflictingReservations.length === 0;
     const alternativeTimes = generateAlternativeTimes(requested_time);
 
     res.writeHead(200, { "Content-Type": "application/json" });
@@ -332,18 +352,11 @@ async function handleCheckAvailability(req, res) {
         requested_date,
         requested_time,
         party_size,
-        conflicting_reservations: isAvailable ? [] : [
-          {
-            id: "demo-uuid-1",
-            customer_name: "Demo Klant",
-            reservation_time: requested_time,
-            party_size: 6
-          }
-        ],
+        conflicting_reservations: conflictingReservations,
         alternative_times: alternativeTimes,
         message: isAvailable 
-          ? `Tijdstip ${requested_time} is beschikbaar voor ${party_size} personen`
-          : `Tijdstip ${requested_time} is niet beschikbaar, hier zijn alternatieven`,
+          ? `Tijdstip ${requested_time} is beschikbaar voor ${party_size} personen (echte database)`
+          : `Tijdstip ${requested_time} is niet beschikbaar, hier zijn alternatieven (echte database)`,
       })
     );
   } catch (error) {
@@ -385,21 +398,35 @@ async function handleBookReservation(req, res) {
       return;
     }
 
-    // Voor nu: gebruik demo data
-    // Later: vervang door echte database insert
-    const newReservation = {
-      id: `demo-${Date.now()}`,
-      restaurant_id,
-      reservation_date,
-      reservation_time,
-      customer_name,
-      customer_email: customer_email || "",
-      customer_phone: customer_phone || "",
-      party_size,
-      notes: notes || "",
-      status: "confirmed",
-      created_at: new Date().toISOString()
-    };
+    // Gebruik echte Supabase database
+    const { data: newReservation, error } = await supabase
+      .from('reservations')
+      .insert({
+        restaurant_id: '550e8400-e29b-41d4-a716-446655440000', // Vaste UUID voor testing
+        reservation_date,
+        reservation_time,
+        customer_name,
+        customer_email: customer_email || "",
+        customer_phone: customer_phone || "",
+        party_size,
+        special_requests: notes || "",
+        status: "confirmed"
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Supabase error:", error);
+      res.writeHead(500, { "Content-Type": "application/json" });
+      res.end(
+        JSON.stringify({
+          success: false,
+          error: "Database fout",
+          details: error.message,
+        })
+      );
+      return;
+    }
 
     res.writeHead(201, { "Content-Type": "application/json" });
     res.end(
@@ -407,7 +434,7 @@ async function handleBookReservation(req, res) {
         success: true,
         booked: true,
         reservation: newReservation,
-        message: `Reservering succesvol aangemaakt voor ${customer_name}`,
+        message: `Reservering succesvol aangemaakt voor ${customer_name} (echte database)`,
       })
     );
   } catch (error) {
