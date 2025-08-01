@@ -355,7 +355,78 @@ async function handleCheckAvailability(req, res) {
     // Gebruik vaste restaurant ID
     const restaurantId = RESTAURANT_ID;
 
-    // 1. Haal totale restaurant capaciteit op
+    // 1. Haal restaurant instellingen op
+    const { data: restaurant, error: restaurantError } = await supabase
+      .from('restaurants')
+      .select('id, name, opening_hours, settings')
+      .eq('id', restaurantId)
+      .single();
+
+    if (restaurantError) {
+      console.error("Supabase error:", restaurantError);
+      res.writeHead(500, { "Content-Type": "application/json" });
+      res.end(
+        JSON.stringify({
+          success: false,
+          error: "Database fout",
+          details: restaurantError.message,
+        })
+      );
+      return;
+    }
+
+    // 2. Check openingstijden
+    const requestedDate = new Date(requested_date);
+    const dayOfWeek = requestedDate.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+    const openingHours = restaurant.opening_hours || {};
+    const dayHours = openingHours[dayOfWeek];
+
+    if (!dayHours || !dayHours.open || !dayHours.close) {
+      res.writeHead(400, { "Content-Type": "application/json" });
+      res.end(
+        JSON.stringify({
+          success: false,
+          error: "Restaurant gesloten",
+          details: `Restaurant is gesloten op ${dayOfWeek}`,
+        })
+      );
+      return;
+    }
+
+    // Check of tijdstip binnen openingstijden valt
+    const requestedTimeStr = requested_time;
+    if (requestedTimeStr < dayHours.open || requestedTimeStr > dayHours.close) {
+      res.writeHead(400, { "Content-Type": "application/json" });
+      res.end(
+        JSON.stringify({
+          success: false,
+          error: "Buiten openingstijden",
+          details: `Restaurant is open van ${dayHours.open} tot ${dayHours.close}`,
+        })
+      );
+      return;
+    }
+
+    // 3. Check restaurant instellingen
+    const settings = restaurant.settings || {};
+    const maxPartySize = settings.max_party_size || 20;
+    const minPartySize = settings.min_party_size || 1;
+    const maxReservationsPerSlot = settings.max_reservations_per_slot || 10;
+    const reservationDuration = settings.reservation_duration_minutes || 120; // 2 uur standaard
+
+    if (party_size < minPartySize || party_size > maxPartySize) {
+      res.writeHead(400, { "Content-Type": "application/json" });
+      res.end(
+        JSON.stringify({
+          success: false,
+          error: "Ongeldige groepsgrootte",
+          details: `Groepsgrootte moet tussen ${minPartySize} en ${maxPartySize} personen zijn`,
+        })
+      );
+      return;
+    }
+
+    // 4. Haal totale restaurant capaciteit op
     const { data: tables, error: tablesError } = await supabase
       .from('restaurant_tables')
       .select('id, table_number, capacity, status')
@@ -377,10 +448,10 @@ async function handleCheckAvailability(req, res) {
 
     const totalCapacity = tables.reduce((sum, table) => sum + table.capacity, 0);
 
-    // 2. Haal alle reserveringen op voor het gewenste tijdsslot (15 minuten overlap)
+    // 5. Haal alle reserveringen op voor het gewenste tijdsslot (reserveringsduur overlap)
     const requestedTime = new Date(`2000-01-01T${requested_time}:00`);
     const timeSlotStart = new Date(requestedTime.getTime() - 15 * 60 * 1000); // 15 min voor
-    const timeSlotEnd = new Date(requestedTime.getTime() + 15 * 60 * 1000);   // 15 min na
+    const timeSlotEnd = new Date(requestedTime.getTime() + reservationDuration * 60 * 1000); // reserveringsduur na
     
     const { data: overlappingReservations, error } = await supabase
       .from('reservations')
@@ -408,9 +479,24 @@ async function handleCheckAvailability(req, res) {
       return reservationTime >= timeSlotStart && reservationTime <= timeSlotEnd;
     });
 
-    // 4. Bereken totale bezette capaciteit in het tijdsslot
+    // 6. Bereken totale bezette capaciteit in het tijdsslot
     const occupiedCapacity = conflictingReservations.reduce((sum, res) => sum + res.party_size, 0);
     const availableCapacity = totalCapacity - occupiedCapacity;
+    
+    // Check max reserveringen per slot
+    if (conflictingReservations.length >= maxReservationsPerSlot) {
+      res.writeHead(400, { "Content-Type": "application/json" });
+      res.end(
+        JSON.stringify({
+          success: false,
+          error: "Tijdsslot vol",
+          details: `Maximum ${maxReservationsPerSlot} reserveringen per tijdsslot bereikt`,
+          conflicting_reservations: conflictingReservations,
+        })
+      );
+      return;
+    }
+    
     const isAvailable = availableCapacity >= party_size;
 
     const alternativeTimes = generateAlternativeTimes(requested_time);
@@ -423,6 +509,14 @@ async function handleCheckAvailability(req, res) {
         requested_date,
         requested_time,
         party_size,
+        restaurant_name: restaurant.name,
+        opening_hours: dayHours,
+        settings: {
+          max_party_size: maxPartySize,
+          min_party_size: minPartySize,
+          max_reservations_per_slot: maxReservationsPerSlot,
+          reservation_duration_minutes: reservationDuration,
+        },
         total_restaurant_capacity: totalCapacity,
         occupied_capacity: occupiedCapacity,
         available_capacity: availableCapacity,
