@@ -2,160 +2,161 @@
   "name": "RestoPlanner Reserveringen API",
   "description": "Make.com blueprint voor RestoPlanner reserveringen beheren",
   "version": "2.0.0",
-  "modules": [
+  "scenarios": [
     {
       "name": "Check Beschikbaarheid",
-      "type": "http",
       "description": "Controleer of een tijdstip beschikbaar is voor reservering",
-      "config": {
-        "url": "https://innovationstudio.be/api/reservations/check-availability",
-        "method": "POST",
-        "headers": {
-          "Content-Type": "application/json",
-          "Accept": "application/json"
-        },
-        "timeout": 15000
-      },
-      "body_schema": {
-        "restaurant_id": {
-          "type": "string",
-          "required": true,
-          "description": "ID van het restaurant",
-          "example": "123"
-        },
-        "requested_date": {
-          "type": "string",
-          "required": true,
-          "description": "Gewenste datum (YYYY-MM-DD)",
-          "example": "2024-01-15"
-        },
-        "requested_time": {
-          "type": "string",
-          "required": true,
-          "description": "Gewenste tijd (HH:MM)",
-          "example": "19:00"
-        },
-        "party_size": {
-          "type": "number",
-          "required": true,
-          "description": "Aantal personen",
-          "example": 4
-        }
-      },
-      "output_schema": {
-        "success": "boolean",
-        "available": "boolean",
-        "requested_date": "string",
-        "requested_time": "string",
-        "party_size": "number",
-        "conflicting_reservations": "array",
-        "alternative_times": "array",
-        "message": "string"
-      },
-      "example_response": {
-        "success": true,
-        "available": false,
-        "requested_date": "2024-01-15",
-        "requested_time": "19:00",
-        "party_size": 4,
-        "conflicting_reservations": [
-          {
-            "id": "uuid-1",
-            "customer_name": "Jan Janssens",
-            "reservation_time": "19:00",
-            "party_size": 6
+      "modules": [
+        {
+          "name": "HTTP Request",
+          "type": "http",
+          "config": {
+            "url": "https://innovationstudio.be/api/reservations/check-availability",
+            "method": "POST",
+            "headers": {
+              "Content-Type": "application/json",
+              "Accept": "application/json"
+            },
+            "body": {
+              "restaurant_id": "123",
+              "requested_date": "2024-01-15",
+              "requested_time": "19:00",
+              "party_size": 4
+            },
+            "timeout": 15000
           }
-        ],
-        "alternative_times": ["18:30", "19:30", "20:00"],
-        "message": "Tijdstip 19:00 is niet beschikbaar, hier zijn alternatieven"
-      }
+        }
+      ]
     },
     {
       "name": "Boek Reservering",
-      "type": "http",
       "description": "Maak een nieuwe reservering aan",
-      "config": {
-        "url": "https://innovationstudio.be/api/reservations/book",
+      "modules": [
+        {
+          "name": "HTTP Request",
+          "type": "http",
+          "config": {
+            "url": "https://innovationstudio.be/api/reservations/book",
+            "method": "POST",
+            "headers": {
+              "Content-Type": "application/json",
+              "Accept": "application/json"
+            },
+            "body": {
+              "restaurant_id": "123",
+              "reservation_date": "2024-01-15",
+              "reservation_time": "19:00",
+              "customer_name": "Jan Janssens",
+              "customer_email": "jan@example.com",
+              "customer_phone": "+31612345678",
+              "party_size": 4,
+              "notes": "Verjaardag"
+            },
+            "timeout": 15000
+          }
+        }
+      ]
+    },
+    {
+      "name": "Update Reservering",
+      "description": "Update een bestaande reservering",
+      "modules": [
+        {
+          "name": "HTTP Request",
+          "type": "http",
+          "config": {
+            "url": "https://innovationstudio.be/api/reservations/update",
+            "method": "PUT",
+            "headers": {
+              "Content-Type": "application/json",
+              "Accept": "application/json"
+            },
+            "body": {
+              "reservation_id": "uuid-123",
+              "reservation_date": "2024-01-16",
+              "reservation_time": "20:00",
+              "customer_name": "Jan Janssens",
+              "party_size": 6,
+              "notes": "Verjaardag + extra gasten"
+            },
+            "timeout": 15000
+          }
+        }
+      ]
+    },
+    {
+      "name": "Verwijder Reservering",
+      "description": "Annuleer een reservering",
+      "modules": [
+        {
+          "name": "HTTP Request",
+          "type": "http",
+          "config": {
+            "url": "https://innovationstudio.be/api/reservations/delete",
+            "method": "DELETE",
+            "headers": {
+              "Content-Type": "application/json",
+              "Accept": "application/json"
+            },
+            "body": {
+              "reservation_id": "uuid-123"
+            },
+            "timeout": 15000
+          }
+        }
+      ]
+    }
+  ],
+  "documentation": {
+    "endpoints": [
+      {
+        "name": "Check Beschikbaarheid",
+        "url": "https://innovationstudio.be/api/reservations/check-availability",
         "method": "POST",
-        "headers": {
-          "Content-Type": "application/json",
-          "Accept": "application/json"
+        "description": "Controleer of een tijdstip beschikbaar is",
+        "required_fields": [
+          "restaurant_id",
+          "requested_date",
+          "requested_time", 
+          "party_size"
+        ],
+        "example_request": {
+          "restaurant_id": "123",
+          "requested_date": "2024-01-15",
+          "requested_time": "19:00",
+          "party_size": 4
         },
-        "timeout": 15000
-      },
-      "body_schema": {
-        "restaurant_id": {
-          "type": "string",
-          "required": true,
-          "description": "ID van het restaurant",
-          "example": "123"
-        },
-        "reservation_date": {
-          "type": "string",
-          "required": true,
-          "description": "Datum van reservering (YYYY-MM-DD)",
-          "example": "2024-01-15"
-        },
-        "reservation_time": {
-          "type": "string",
-          "required": true,
-          "description": "Tijd van reservering (HH:MM)",
-          "example": "19:00"
-        },
-        "customer_name": {
-          "type": "string",
-          "required": true,
-          "description": "Naam van de klant",
-          "example": "Jan Janssens"
-        },
-        "customer_email": {
-          "type": "string",
-          "required": false,
-          "description": "Email van de klant",
-          "example": "jan@example.com"
-        },
-        "customer_phone": {
-          "type": "string",
-          "required": false,
-          "description": "Telefoonnummer van de klant",
-          "example": "+31612345678"
-        },
-        "party_size": {
-          "type": "number",
-          "required": true,
-          "description": "Aantal personen",
-          "example": 4
-        },
-        "notes": {
-          "type": "string",
-          "required": false,
-          "description": "Extra notities",
-          "example": "Verjaardag"
+        "example_response": {
+          "success": true,
+          "available": false,
+          "requested_date": "2024-01-15",
+          "requested_time": "19:00",
+          "party_size": 4,
+          "conflicting_reservations": [
+            {
+              "id": "uuid-1",
+              "customer_name": "Jan Janssens",
+              "reservation_time": "19:00",
+              "party_size": 6
+            }
+          ],
+          "alternative_times": ["18:30", "19:30", "20:00"],
+          "message": "Tijdstip 19:00 is niet beschikbaar, hier zijn alternatieven"
         }
       },
-      "output_schema": {
-        "success": "boolean",
-        "booked": "boolean",
-        "reservation": {
-          "id": "string",
-          "restaurant_id": "string",
-          "reservation_date": "string",
-          "reservation_time": "string",
-          "customer_name": "string",
-          "customer_email": "string",
-          "customer_phone": "string",
-          "party_size": "number",
-          "notes": "string",
-          "status": "string",
-          "created_at": "string"
-        },
-        "message": "string"
-      },
-      "example_response": {
-        "success": true,
-        "booked": true,
-        "reservation": {
-          "id": "uuid-123",
+      {
+        "name": "Boek Reservering",
+        "url": "https://innovationstudio.be/api/reservations/book",
+        "method": "POST",
+        "description": "Maak een nieuwe reservering aan",
+        "required_fields": [
+          "restaurant_id",
+          "reservation_date",
+          "reservation_time",
+          "customer_name",
+          "party_size"
+        ],
+        "example_request": {
           "restaurant_id": "123",
           "reservation_date": "2024-01-15",
           "reservation_time": "19:00",
@@ -163,159 +164,99 @@
           "customer_email": "jan@example.com",
           "customer_phone": "+31612345678",
           "party_size": 4,
-          "notes": "Verjaardag",
-          "status": "confirmed",
-          "created_at": "2024-01-01T10:00:00Z"
+          "notes": "Verjaardag"
         },
-        "message": "Reservering succesvol aangemaakt voor Jan Janssens"
-      }
-    },
-    {
-      "name": "Beheer Reservering",
-      "type": "http",
-      "description": "Update of verwijder een bestaande reservering",
-      "config": {
-        "url": "https://innovationstudio.be/api/reservations/update",
-        "method": "PUT",
-        "headers": {
-          "Content-Type": "application/json",
-          "Accept": "application/json"
-        },
-        "timeout": 15000
-      },
-      "body_schema": {
-        "reservation_id": {
-          "type": "string",
-          "required": true,
-          "description": "ID van de reservering",
-          "example": "uuid-123"
-        },
-        "reservation_date": {
-          "type": "string",
-          "required": false,
-          "description": "Nieuwe datum (YYYY-MM-DD)",
-          "example": "2024-01-16"
-        },
-        "reservation_time": {
-          "type": "string",
-          "required": false,
-          "description": "Nieuwe tijd (HH:MM)",
-          "example": "20:00"
-        },
-        "customer_name": {
-          "type": "string",
-          "required": false,
-          "description": "Nieuwe naam",
-          "example": "Jan Janssens"
-        },
-        "customer_email": {
-          "type": "string",
-          "required": false,
-          "description": "Nieuw email",
-          "example": "jan@example.com"
-        },
-        "customer_phone": {
-          "type": "string",
-          "required": false,
-          "description": "Nieuw telefoonnummer",
-          "example": "+31612345678"
-        },
-        "party_size": {
-          "type": "number",
-          "required": false,
-          "description": "Nieuw aantal personen",
-          "example": 6
-        },
-        "notes": {
-          "type": "string",
-          "required": false,
-          "description": "Nieuwe notities",
-          "example": "Verjaardag + extra gasten"
-        },
-        "status": {
-          "type": "string",
-          "required": false,
-          "description": "Nieuwe status",
-          "example": "confirmed"
+        "example_response": {
+          "success": true,
+          "booked": true,
+          "reservation": {
+            "id": "uuid-123",
+            "restaurant_id": "123",
+            "reservation_date": "2024-01-15",
+            "reservation_time": "19:00",
+            "customer_name": "Jan Janssens",
+            "customer_email": "jan@example.com",
+            "customer_phone": "+31612345678",
+            "party_size": 4,
+            "notes": "Verjaardag",
+            "status": "confirmed",
+            "created_at": "2024-01-01T10:00:00Z"
+          },
+          "message": "Reservering succesvol aangemaakt voor Jan Janssens"
         }
       },
-      "output_schema": {
-        "success": "boolean",
-        "updated": "boolean",
-        "reservation": "object",
-        "message": "string"
-      },
-      "example_response": {
-        "success": true,
-        "updated": true,
-        "reservation": {
-          "id": "uuid-123",
+      {
+        "name": "Update Reservering",
+        "url": "https://innovationstudio.be/api/reservations/update",
+        "method": "PUT",
+        "description": "Update een bestaande reservering",
+        "required_fields": [
+          "reservation_id"
+        ],
+        "example_request": {
+          "reservation_id": "uuid-123",
           "reservation_date": "2024-01-16",
           "reservation_time": "20:00",
           "customer_name": "Jan Janssens",
           "party_size": 6,
-          "status": "confirmed"
+          "notes": "Verjaardag + extra gasten"
         },
-        "message": "Reservering succesvol bijgewerkt"
-      }
-    },
-    {
-      "name": "Verwijder Reservering",
-      "type": "http",
-      "description": "Annuleer een reservering",
-      "config": {
-        "url": "https://innovationstudio.be/api/reservations/delete",
-        "method": "DELETE",
-        "headers": {
-          "Content-Type": "application/json",
-          "Accept": "application/json"
-        },
-        "timeout": 15000
-      },
-      "body_schema": {
-        "reservation_id": {
-          "type": "string",
-          "required": true,
-          "description": "ID van de reservering om te annuleren",
-          "example": "uuid-123"
+        "example_response": {
+          "success": true,
+          "updated": true,
+          "reservation": {
+            "id": "uuid-123",
+            "reservation_date": "2024-01-16",
+            "reservation_time": "20:00",
+            "customer_name": "Jan Janssens",
+            "party_size": 6,
+            "status": "confirmed"
+          },
+          "message": "Reservering succesvol bijgewerkt"
         }
       },
-      "output_schema": {
-        "success": "boolean",
-        "deleted": "boolean",
-        "reservation_id": "string",
-        "message": "string"
-      },
-      "example_response": {
-        "success": true,
-        "deleted": true,
-        "reservation_id": "uuid-123",
-        "message": "Reservering succesvol geannuleerd"
+      {
+        "name": "Verwijder Reservering",
+        "url": "https://innovationstudio.be/api/reservations/delete",
+        "method": "DELETE",
+        "description": "Annuleer een reservering",
+        "required_fields": [
+          "reservation_id"
+        ],
+        "example_request": {
+          "reservation_id": "uuid-123"
+        },
+        "example_response": {
+          "success": true,
+          "deleted": true,
+          "reservation_id": "uuid-123",
+          "message": "Reservering succesvol geannuleerd"
+        }
       }
-    }
-  ],
+    ]
+  },
   "setup_instructions": {
     "title": "RestoPlanner Reserveringen Setup in Make.com",
     "steps": [
       {
         "step": 1,
-        "title": "Import Blueprint",
-        "description": "Importeer dit JSON bestand in Make.com via de Blueprint functie"
+        "title": "Maak nieuwe scenario's",
+        "description": "Maak 4 nieuwe scenario's in Make.com voor elke endpoint"
       },
       {
         "step": 2,
-        "title": "Configureer HTTP Modules",
-        "description": "Voor elke module, kopieer de configuratie uit de blueprint"
+        "title": "Voeg HTTP modules toe",
+        "description": "Voor elk scenario, voeg een HTTP module toe met de configuratie uit de documentatie"
       },
       {
         "step": 3,
-        "title": "Test de Verbinding",
-        "description": "Test eerst de Check Beschikbaarheid module"
+        "title": "Configureer parameters",
+        "description": "Pas restaurant_id en andere parameters aan naar jouw waarden"
       },
       {
         "step": 4,
-        "title": "Configureer Parameters",
-        "description": "Pas restaurant_id en andere parameters aan naar jouw waarden"
+        "title": "Test de endpoints",
+        "description": "Test elke endpoint om te controleren of ze werken"
       }
     ]
   },
@@ -325,8 +266,8 @@
       "description": "Automatische reservering via website formulier",
       "workflow": [
         "1. Website formulier → Make.com webhook",
-        "2. Check beschikbaarheid",
-        "3. Als beschikbaar → Boek reservering",
+        "2. Check beschikbaarheid endpoint",
+        "3. Als beschikbaar → Boek reservering endpoint",
         "4. Als niet beschikbaar → Stuur alternatieven",
         "5. Email bevestiging naar klant"
       ]
@@ -335,8 +276,8 @@
       "scenario": "Telefoon reservering",
       "description": "Handmatige reservering via telefoon",
       "workflow": [
-        "1. Manual entry → Check beschikbaarheid",
-        "2. Boek reservering",
+        "1. Manual entry → Check beschikbaarheid endpoint",
+        "2. Boek reservering endpoint",
         "3. SMS bevestiging naar klant"
       ]
     },
@@ -344,7 +285,7 @@
       "scenario": "Reservering wijzigen",
       "description": "Klant wil reservering aanpassen",
       "workflow": [
-        "1. Email/SMS van klant → Beheer reservering",
+        "1. Email/SMS van klant → Update reservering endpoint",
         "2. Update reservering details",
         "3. Email bevestiging van wijziging"
       ]
@@ -353,7 +294,7 @@
       "scenario": "Reservering annuleren",
       "description": "Klant wil reservering annuleren",
       "workflow": [
-        "1. Email/SMS van klant → Verwijder reservering",
+        "1. Email/SMS van klant → Verwijder reservering endpoint",
         "2. Annuleer reservering",
         "3. Email bevestiging van annulering"
       ]
@@ -382,28 +323,6 @@
         "solution": "Controleer server logs voor details"
       }
     ]
-  },
-  "data_mapping": {
-    "check_availability": {
-      "available": "{{1.available}}",
-      "alternative_times": "{{1.alternative_times}}",
-      "conflicting_count": "{{1.conflicting_reservations.length}}"
-    },
-    "book_reservation": {
-      "reservation_id": "{{1.reservation.id}}",
-      "customer_name": "{{1.reservation.customer_name}}",
-      "reservation_date": "{{1.reservation.reservation_date}}",
-      "reservation_time": "{{1.reservation.reservation_time}}"
-    },
-    "update_reservation": {
-      "updated": "{{1.updated}}",
-      "new_date": "{{1.reservation.reservation_date}}",
-      "new_time": "{{1.reservation.reservation_time}}"
-    },
-    "delete_reservation": {
-      "deleted": "{{1.deleted}}",
-      "reservation_id": "{{1.reservation_id}}"
-    }
   },
   "metadata": {
     "author": "RestoPlanner Team",
