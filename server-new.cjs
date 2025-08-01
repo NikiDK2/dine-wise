@@ -23,7 +23,7 @@ app.use(express.static(path.join(__dirname, "dist")));
 app.get("/api/health", (req, res) => {
   res.json({
     status: "OK",
-    message: "RestoPlanner API is actief - NIEUWE VERSIE",
+    message: "RestoPlanner API is actief",
     timestamp: new Date().toISOString(),
   });
 });
@@ -31,7 +31,7 @@ app.get("/api/health", (req, res) => {
 app.get("/health", (req, res) => {
   res.json({
     status: "OK",
-    message: "RestoPlanner Health Check - NIEUWE VERSIE",
+    message: "RestoPlanner Health Check",
     timestamp: new Date().toISOString(),
   });
 });
@@ -41,7 +41,7 @@ app.get("/api/agenda/health", (req, res) => {
   res.json({
     success: true,
     status: "OK",
-    message: "Agenda API is actief - NIEUWE VERSIE",
+    message: "Agenda API is actief",
     timestamp: new Date().toISOString(),
   });
 });
@@ -111,7 +111,7 @@ app.get("*", (req, res) => {
 
 // Start server
 app.listen(PORT, () => {
-  console.log(`🚀 RestoPlanner API draait op poort ${PORT} - NIEUWE VERSIE`);
+  console.log(`🚀 RestoPlanner API draait op poort ${PORT}`);
   console.log(`📡 API beschikbaar op: http://localhost:${PORT}/api/health`);
   console.log(`🏥 Health check: http://localhost:${PORT}/health`);
   console.log(`🌐 Frontend beschikbaar op: http://localhost:${PORT}`);

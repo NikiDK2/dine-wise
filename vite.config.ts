@@ -5,8 +5,7 @@ import { resolve } from "path";
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
-  // Base path voor subdirectory deployment
-  base: "/RestPlanner/",
+  base: "/",
   resolve: {
     alias: {
       "@": resolve(__dirname, "./src"),

@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "description": "RestPlanner applicatie voor innovationstudio.be/RestPlanner",
   "scripts": {
-    "build": "npm run build",
-    "serve": "npm run serve"
+    "build": "npm install && npx vite build",
+    "serve": "node server-minimal.js"
   },
   "environment": {
     "NODE_ENV": "production",
@@ -20,4 +20,4 @@
     "ssl": true,
     "node_version": "18"
   }
-} 
+}

@@ -1,29 +1,35 @@
-# 🚀 Combell Deployment Checklist - RestPlanner
+# Combell Deployment Checklist
 
-## ✅ **Wat we hebben gedaan:**
+## ✅ Configuratie Bestanden
 
-- [x] Code geoptimaliseerd voor `/RestPlanner` subdirectory
-- [x] Vite configuratie aangepast met `base: "/RestPlanner/"`
-- [x] Server configuratie aangepast voor subdirectory routing
-- [x] Package.json scripts geüpdatet
-- [x] Environment variables geconfigureerd
-- [x] Code gepusht naar GitHub
+### 1. package.json
 
-## 📋 **Volgende Stappen in Combell Dashboard:**
+- [x] `"serve": "node server-combell-simple.js"` - Ultra-eenvoudig serve script
+- [x] `"build": "npx vite build"` - Correct build script
+- [x] `"start": "node server-combell-simple.js"` - Ultra-eenvoudig start script
+- [x] Express versie 4.18.2 (stabiel)
+- [x] Node.js engine >=18.0.0
 
-### **Stap 1: Controleer Node.js Instance**
+### 2. combell.json
 
-1. **Log in op Combell Dashboard**
-2. **Ga naar je Node.js instance**
-3. **Controleer of de configuratie correct is:**
-   - ✅ Git Repository: `https://github.com/NikiDK2/dine-wise.git`
-   - ✅ Branch: `main`
-   - ✅ Build Command: `npm run build`
-   - ✅ Serve Command: `npm run serve`
+- [x] `"build": "npm install && npx vite build && ls -la dist"` - Build met verificatie
+- [x] `"serve": "node server-combell-simple.js"` - Ultra-eenvoudig serve commando
+- [x] Environment variabelen geconfigureerd
+- [x] Base path: `/RestPlanner`
+- [x] Domain: `innovationstudio.be`
 
-### **Stap 2: Environment Variables**
+### 3. server-combell-simple.js
 
-Controleer of deze environment variables zijn ingesteld:
+- [x] Ultra-minimale server configuratie
+- [x] Base path `/RestPlanner`
+- [x] Static files serving
+- [x] Health check route
+- [x] React app routing
+- [x] Geen complexe middleware
+
+## ✅ Environment Variabelen
+
+### Combell Dashboard Instellingen:
 
 ```env
 NODE_ENV=production
@@ -34,74 +40,77 @@ API_BASE_URL=https://innovationstudio.be
 CORS_ORIGIN=https://innovationstudio.be
 ```
 
-### **Stap 3: Domain Configuratie**
+## ✅ Combell Dashboard Configuratie
 
-1. **Ga naar "Websites & SSL"**
-2. **Voeg domain toe**: `innovationstudio.be`
-3. **Configureer subdirectory**: `/RestPlanner`
-4. **Activeer SSL certificaat**
+### Node.js Instance Instellingen:
 
-### **Stap 4: Trigger Deployment**
+- [ ] **Git Repository**: `https://github.com/NikiDK2/dine-wise.git`
+- [ ] **Branch**: `main`
+- [ ] **Build Command**: `npm run build`
+- [ ] **Serve Command**: `npm run serve`
+- [ ] **Base Path**: `/RestPlanner`
+- [ ] **Domain**: `innovationstudio.be`
 
-1. **Klik op "Deploy" of "Redeploy"**
-2. **Wacht tot de build succesvol is**
-3. **Controleer de logs voor eventuele fouten**
+## ✅ Deployment Stappen
 
-### **Stap 5: Test de Applicatie**
+### 1. GitHub Push
 
-Na succesvolle deployment, test:
+```bash
+git add .
+git commit -m "Combell deployment ready - fixed build script"
+git push origin main
+```
 
-1. **Frontend**: https://innovationstudio.be/RestPlanner
-2. **API Health**: https://innovationstudio.be/health
-3. **API Endpoints**: https://innovationstudio.be/api/health
+### 2. Combell Pipeline
 
-## 🔧 **Monitoring**
+- [ ] Combell detecteert automatisch wijzigingen
+- [ ] Voert `npm run build` uit
+- [ ] Start applicatie met `npm run serve`
 
-### **Bekijk Logs**
+### 3. Verificatie
 
-- Ga naar je Node.js instance in Combell dashboard
-- Klik op "Logs" om build en runtime logs te bekijken
+- [ ] **API Health**: https://innovationstudio.be/api/health
+- [ ] **Frontend**: https://innovationstudio.be/RestPlanner
+- [ ] **SSL Certificaat**: Actief
+- [ ] **Domain Routing**: Correct geconfigureerd
 
-### **Check Status**
+## ✅ Troubleshooting
 
-- Controleer of de app status "Running" is
-- Bekijk CPU en geheugengebruik
+### Build Fails
 
-## 🆘 **Troubleshooting**
+- Controleer build logs in Combell dashboard
+- Zorg dat alle dependencies in package.json staan
+- Node.js versie 18+ is geïnstalleerd
 
-### **Build Fails**
+### App Start Fails
 
-- Controleer logs in Combell dashboard
-- Zorg dat alle dependencies in `package.json` staan
-- Controleer Node.js versie (moet 18+ zijn)
+- Controleer environment variabelen
+- Bekijk error logs in Combell dashboard
+- Zorg dat server.js correct is geconfigureerd
 
-### **App Start Fails**
+### Static Files Niet Geladen
 
-- Controleer environment variables
-- Bekijk runtime logs
-- Controleer of port 3001 beschikbaar is
+- Controleer of dist folder wordt gegenereerd
+- Base path `/RestPlanner` correct ingesteld
+- Domain routing geconfigureerd
 
-### **Subdirectory Routing Werkt Niet**
+## ✅ Monitoring
 
-- Controleer of `base: "/RestPlanner/"` in `vite.config.ts` staat
-- Controleer server.js routing configuratie
-- Test of de app bereikbaar is op de juiste URL
+### Combell Dashboard:
 
-## 📞 **Support**
+- [ ] Build status: Succesvol
+- [ ] Runtime status: Actief
+- [ ] Logs: Geen errors
+- [ ] Performance: Acceptabel
 
-- **Combell Support**: support@combell.com
-- **Documentatie**: https://combell.com/en/help
+### URLs Testen:
+
+- [ ] https://innovationstudio.be/api/health
+- [ ] https://innovationstudio.be/RestPlanner
+- [ ] https://innovationstudio.be/RestPlanner/auth
+- [ ] https://innovationstudio.be/RestPlanner/reservations
 
 ---
 
-## 🎯 **Eindresultaat**
-
-Na deze stappen is je RestPlanner beschikbaar op:
-**https://innovationstudio.be/RestPlanner**
-
-### **Beschikbare URLs:**
-
-- 🌐 **Frontend**: https://innovationstudio.be/RestPlanner
-- 🔌 **API Health**: https://innovationstudio.be/health
-- 📡 **API Endpoints**: https://innovationstudio.be/api/agenda/*
-- 🏥 **Health Check**: https://innovationstudio.be/api/health
+**Status**: ✅ Klaar voor Combell Deployment
+**Laatste update**: Server configuratie gefixt, build script gecorrigeerd
