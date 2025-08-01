@@ -16,7 +16,24 @@ const supabase = createClient(supabaseUrl, supabaseKey, {
   },
 });
 
-const server = http.createServer((req, res) => {
+// Helper functie om request body te parsen
+function parseRequestBody(req) {
+  return new Promise((resolve, reject) => {
+    let body = '';
+    req.on('data', chunk => {
+      body += chunk.toString();
+    });
+    req.on('end', () => {
+      try {
+        resolve(JSON.parse(body));
+      } catch (error) {
+        reject(error);
+      }
+    });
+  });
+}
+
+const server = http.createServer(async (req, res) => {
   console.log("Request:", req.method, req.url);
 
   // Set CORS headers
@@ -81,6 +98,32 @@ const server = http.createServer((req, res) => {
   // GET /api/agenda/calendar - Echte data van Supabase
   if (req.url.startsWith("/api/agenda/calendar")) {
     handleCalendar(req, res);
+    return;
+  }
+
+  // NIEUWE ENDPOINTS VOOR RESERVERINGEN BEHEREN
+
+  // 1. POST /api/reservations/check-availability - Check beschikbaarheid
+  if (req.url === "/api/reservations/check-availability" && req.method === "POST") {
+    handleCheckAvailability(req, res);
+    return;
+  }
+
+  // 2. POST /api/reservations/book - Boek nieuwe reservering
+  if (req.url === "/api/reservations/book" && req.method === "POST") {
+    handleBookReservation(req, res);
+    return;
+  }
+
+  // 3. PUT /api/reservations/update - Update bestaande reservering
+  if (req.url === "/api/reservations/update" && req.method === "PUT") {
+    handleUpdateReservation(req, res);
+    return;
+  }
+
+  // 4. DELETE /api/reservations/delete - Verwijder reservering
+  if (req.url === "/api/reservations/delete" && req.method === "DELETE") {
+    handleDeleteReservation(req, res);
     return;
   }
 
@@ -259,6 +302,363 @@ async function handleCalendar(req, res) {
   }
 }
 
+// 1. Check beschikbaarheid voor een specifiek tijdstip
+async function handleCheckAvailability(req, res) {
+  try {
+    const body = await parseRequestBody(req);
+    const { restaurant_id, requested_date, requested_time, party_size } = body;
+
+    if (!restaurant_id || !requested_date || !requested_time || !party_size) {
+      res.writeHead(400, { "Content-Type": "application/json" });
+      res.end(
+        JSON.stringify({
+          success: false,
+          error: "restaurant_id, requested_date, requested_time en party_size zijn verplicht",
+        })
+      );
+      return;
+    }
+
+    // Check of er conflicterende reserveringen zijn
+    const { data: conflictingReservations, error } = await supabase
+      .from("reservations")
+      .select("*")
+      .eq("restaurant_id", restaurant_id)
+      .eq("reservation_date", requested_date)
+      .eq("reservation_time", requested_time)
+      .not("status", "eq", "cancelled");
+
+    if (error) {
+      console.error("Supabase error:", error);
+      res.writeHead(500, { "Content-Type": "application/json" });
+      res.end(
+        JSON.stringify({
+          success: false,
+          error: "Database fout",
+          details: error.message,
+        })
+      );
+      return;
+    }
+
+    const isAvailable = conflictingReservations.length === 0;
+    const alternativeTimes = generateAlternativeTimes(requested_time);
+
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(
+      JSON.stringify({
+        success: true,
+        available: isAvailable,
+        requested_date,
+        requested_time,
+        party_size,
+        conflicting_reservations: conflictingReservations,
+        alternative_times: alternativeTimes,
+        message: isAvailable 
+          ? `Tijdstip ${requested_time} is beschikbaar voor ${party_size} personen`
+          : `Tijdstip ${requested_time} is niet beschikbaar, hier zijn alternatieven`,
+      })
+    );
+  } catch (error) {
+    console.error("Error in check availability:", error);
+    res.writeHead(500, { "Content-Type": "application/json" });
+    res.end(
+      JSON.stringify({
+        success: false,
+        error: "Server fout",
+        details: error.message,
+      })
+    );
+  }
+}
+
+// 2. Boek nieuwe reservering
+async function handleBookReservation(req, res) {
+  try {
+    const body = await parseRequestBody(req);
+    const { 
+      restaurant_id, 
+      reservation_date, 
+      reservation_time, 
+      customer_name, 
+      customer_email, 
+      customer_phone, 
+      party_size, 
+      notes 
+    } = body;
+
+    if (!restaurant_id || !reservation_date || !reservation_time || !customer_name || !party_size) {
+      res.writeHead(400, { "Content-Type": "application/json" });
+      res.end(
+        JSON.stringify({
+          success: false,
+          error: "restaurant_id, reservation_date, reservation_time, customer_name en party_size zijn verplicht",
+        })
+      );
+      return;
+    }
+
+    // Check eerst beschikbaarheid
+    const { data: conflictingReservations, error: checkError } = await supabase
+      .from("reservations")
+      .select("*")
+      .eq("restaurant_id", restaurant_id)
+      .eq("reservation_date", reservation_date)
+      .eq("reservation_time", reservation_time)
+      .not("status", "eq", "cancelled");
+
+    if (checkError) {
+      console.error("Supabase error:", checkError);
+      res.writeHead(500, { "Content-Type": "application/json" });
+      res.end(
+        JSON.stringify({
+          success: false,
+          error: "Database fout bij beschikbaarheid check",
+          details: checkError.message,
+        })
+      );
+      return;
+    }
+
+    if (conflictingReservations.length > 0) {
+      res.writeHead(409, { "Content-Type": "application/json" });
+      res.end(
+        JSON.stringify({
+          success: false,
+          error: "Tijdstip is niet beschikbaar",
+          conflicting_reservations: conflictingReservations,
+          alternative_times: generateAlternativeTimes(reservation_time),
+        })
+      );
+      return;
+    }
+
+    // Maak nieuwe reservering aan
+    const { data: newReservation, error: insertError } = await supabase
+      .from("reservations")
+      .insert({
+        restaurant_id,
+        reservation_date,
+        reservation_time,
+        customer_name,
+        customer_email,
+        customer_phone,
+        party_size,
+        notes,
+        status: "confirmed",
+      })
+      .select()
+      .single();
+
+    if (insertError) {
+      console.error("Supabase error:", insertError);
+      res.writeHead(500, { "Content-Type": "application/json" });
+      res.end(
+        JSON.stringify({
+          success: false,
+          error: "Database fout bij aanmaken reservering",
+          details: insertError.message,
+        })
+      );
+      return;
+    }
+
+    res.writeHead(201, { "Content-Type": "application/json" });
+    res.end(
+      JSON.stringify({
+        success: true,
+        booked: true,
+        reservation: newReservation,
+        message: `Reservering succesvol aangemaakt voor ${customer_name}`,
+      })
+    );
+  } catch (error) {
+    console.error("Error in book reservation:", error);
+    res.writeHead(500, { "Content-Type": "application/json" });
+    res.end(
+      JSON.stringify({
+        success: false,
+        error: "Server fout",
+        details: error.message,
+      })
+    );
+  }
+}
+
+// 3. Update bestaande reservering
+async function handleUpdateReservation(req, res) {
+  try {
+    const body = await parseRequestBody(req);
+    const { 
+      reservation_id, 
+      reservation_date, 
+      reservation_time, 
+      customer_name, 
+      customer_email, 
+      customer_phone, 
+      party_size, 
+      notes,
+      status 
+    } = body;
+
+    if (!reservation_id) {
+      res.writeHead(400, { "Content-Type": "application/json" });
+      res.end(
+        JSON.stringify({
+          success: false,
+          error: "reservation_id is verplicht",
+        })
+      );
+      return;
+    }
+
+    // Check of reservering bestaat
+    const { data: existingReservation, error: checkError } = await supabase
+      .from("reservations")
+      .select("*")
+      .eq("id", reservation_id)
+      .single();
+
+    if (checkError || !existingReservation) {
+      res.writeHead(404, { "Content-Type": "application/json" });
+      res.end(
+        JSON.stringify({
+          success: false,
+          error: "Reservering niet gevonden",
+        })
+      );
+      return;
+    }
+
+    // Update reservering
+    const updateData = {};
+    if (reservation_date) updateData.reservation_date = reservation_date;
+    if (reservation_time) updateData.reservation_time = reservation_time;
+    if (customer_name) updateData.customer_name = customer_name;
+    if (customer_email) updateData.customer_email = customer_email;
+    if (customer_phone) updateData.customer_phone = customer_phone;
+    if (party_size) updateData.party_size = party_size;
+    if (notes !== undefined) updateData.notes = notes;
+    if (status) updateData.status = status;
+
+    const { data: updatedReservation, error: updateError } = await supabase
+      .from("reservations")
+      .update(updateData)
+      .eq("id", reservation_id)
+      .select()
+      .single();
+
+    if (updateError) {
+      console.error("Supabase error:", updateError);
+      res.writeHead(500, { "Content-Type": "application/json" });
+      res.end(
+        JSON.stringify({
+          success: false,
+          error: "Database fout bij updaten reservering",
+          details: updateError.message,
+        })
+      );
+      return;
+    }
+
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(
+      JSON.stringify({
+        success: true,
+        updated: true,
+        reservation: updatedReservation,
+        message: `Reservering succesvol bijgewerkt`,
+      })
+    );
+  } catch (error) {
+    console.error("Error in update reservation:", error);
+    res.writeHead(500, { "Content-Type": "application/json" });
+    res.end(
+      JSON.stringify({
+        success: false,
+        error: "Server fout",
+        details: error.message,
+      })
+    );
+  }
+}
+
+// 4. Verwijder reservering
+async function handleDeleteReservation(req, res) {
+  try {
+    const body = await parseRequestBody(req);
+    const { reservation_id } = body;
+
+    if (!reservation_id) {
+      res.writeHead(400, { "Content-Type": "application/json" });
+      res.end(
+        JSON.stringify({
+          success: false,
+          error: "reservation_id is verplicht",
+        })
+      );
+      return;
+    }
+
+    // Check of reservering bestaat
+    const { data: existingReservation, error: checkError } = await supabase
+      .from("reservations")
+      .select("*")
+      .eq("id", reservation_id)
+      .single();
+
+    if (checkError || !existingReservation) {
+      res.writeHead(404, { "Content-Type": "application/json" });
+      res.end(
+        JSON.stringify({
+          success: false,
+          error: "Reservering niet gevonden",
+        })
+      );
+      return;
+    }
+
+    // Verwijder reservering (soft delete door status op cancelled te zetten)
+    const { error: deleteError } = await supabase
+      .from("reservations")
+      .update({ status: "cancelled" })
+      .eq("id", reservation_id);
+
+    if (deleteError) {
+      console.error("Supabase error:", deleteError);
+      res.writeHead(500, { "Content-Type": "application/json" });
+      res.end(
+        JSON.stringify({
+          success: false,
+          error: "Database fout bij verwijderen reservering",
+          details: deleteError.message,
+        })
+      );
+      return;
+    }
+
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(
+      JSON.stringify({
+        success: true,
+        deleted: true,
+        reservation_id,
+        message: `Reservering succesvol geannuleerd`,
+      })
+    );
+  } catch (error) {
+    console.error("Error in delete reservation:", error);
+    res.writeHead(500, { "Content-Type": "application/json" });
+    res.end(
+      JSON.stringify({
+        success: false,
+        error: "Server fout",
+        details: error.message,
+      })
+    );
+  }
+}
+
 // Helper functie om free/busy periods te genereren
 function generateFreeBusyPeriods(reservations) {
   const periods = [];
@@ -314,6 +714,24 @@ function groupReservationsByDate(reservations) {
   return Object.values(grouped);
 }
 
+// Helper functie om alternatieve tijden te genereren
+function generateAlternativeTimes(requestedTime) {
+  const baseTime = new Date(`2000-01-01T${requestedTime}:00`);
+  const alternatives = [];
+  
+  // Genereer tijden 30 minuten voor en na het gewenste tijdstip
+  for (let i = -2; i <= 2; i++) {
+    if (i === 0) continue; // Skip het gewenste tijdstip
+    const alternativeTime = new Date(baseTime.getTime() + i * 30 * 60 * 1000);
+    const timeString = alternativeTime.toTimeString().slice(0, 5);
+    if (timeString >= "17:00" && timeString <= "22:00") {
+      alternatives.push(timeString);
+    }
+  }
+  
+  return alternatives;
+}
+
 server.listen(PORT, () => {
   console.log(
     `🚀 RestoPlanner API draait op poort ${PORT} - MET SUPABASE DATABASE`
@@ -323,4 +741,9 @@ server.listen(PORT, () => {
   console.log(`🌐 Frontend beschikbaar op: http://localhost:${PORT}`);
   console.log(`🗄️ Supabase database verbonden: ${supabaseUrl}`);
   console.log(`✅ Echte data beschikbaar via API endpoints!`);
+  console.log(`📋 Nieuwe endpoints toegevoegd:`);
+  console.log(`   - POST /api/reservations/check-availability`);
+  console.log(`   - POST /api/reservations/book`);
+  console.log(`   - PUT /api/reservations/update`);
+  console.log(`   - DELETE /api/reservations/delete`);
 });

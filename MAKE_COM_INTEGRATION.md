@@ -1,353 +1,224 @@
-# 🔗 Make.com Integratie - RestoPlanner API
+# 🚀 RestoPlanner Make.com Integratie
 
-## 📋 Overzicht
+## 📋 **Overzicht**
 
-Deze gids legt uit hoe je Make.com kunt integreren met de RestoPlanner API voor automatische reserveringen.
+Deze handleiding helpt je om de RestoPlanner API's te integreren in Make.com voor automatische workflows.
 
-## 🎯 API Endpoints voor Make.com
+## 🔗 **API Endpoints**
 
-### **1. Beschikbaarheid Controleren + Automatisch Boeken**
-
-```
-POST /api/agenda/check-and-book
-```
-
-**Request Body:**
-
-```json
-{
-  "restaurant_id": "ce326c61-ca96-4b55-aae0-04046f2bbb17",
-  "requested_date": "2024-01-15",
-  "requested_time": "19:00",
-  "customer_name": "John Doe",
-  "customer_email": "john@example.com",
-  "customer_phone": "+31612345678",
-  "party_size": 4,
-  "notes": "Verjaardag",
-  "auto_book": true
-}
-```
-
-**Response (Beschikbaar):**
-
-```json
-{
-  "success": true,
-  "available": true,
-  "booked": true,
-  "reservation": {
-    "id": "uuid",
-    "customer_name": "John Doe",
-    "reservation_date": "2024-01-15",
-    "reservation_time": "19:00",
-    "party_size": 4,
-    "status": "confirmed"
-  },
-  "message": "Reservering succesvol aangemaakt"
-}
-```
-
-**Response (Niet Beschikbaar):**
-
-```json
-{
-  "success": true,
-  "available": false,
-  "booked": false,
-  "requested_date": "2024-01-15",
-  "requested_time": "19:00",
-  "conflicting_reservations": [
-    {
-      "id": "uuid",
-      "customer_name": "Jane Smith",
-      "reservation_time": "19:00",
-      "party_size": 6
-    }
-  ],
-  "alternative_times": ["18:00", "18:30", "20:00", "20:30", "21:00"],
-  "message": "Tijdstip is niet beschikbaar, hier zijn alternatieven"
-}
-```
-
-### **2. Alleen Beschikbaarheid Controleren**
+### 1. **Health Check**
 
 ```
-POST /api/agenda/check-availability
+GET https://innovationstudio.be/api/health
 ```
 
-**Request Body:**
+**Doel:** Controleer of de API actief is
 
-```json
-{
-  "restaurant_id": "ce326c61-ca96-4b55-aae0-04046f2bbb17",
-  "requested_date": "2024-01-15",
-  "requested_time": "19:00",
-  "party_size": 4
-}
-```
-
-### **3. Direct Boeken (Zonder Check)**
+### 2. **Free/Busy Information**
 
 ```
-POST /api/agenda/book
+GET https://innovationstudio.be/api/agenda/free-busy?restaurant_id=123&date=2024-01-15
 ```
 
-**Request Body:**
+**Doel:** Haal beschikbare tijdsloten op voor een specifieke datum
 
-```json
-{
-  "restaurant_id": "ce326c61-ca96-4b55-aae0-04046f2bbb17",
-  "reservation_date": "2024-01-15",
-  "reservation_time": "19:00",
-  "customer_name": "John Doe",
-  "customer_email": "john@example.com",
-  "customer_phone": "+31612345678",
-  "party_size": 4,
-  "notes": "Verjaardag"
-}
-```
-
-### **4. Beschikbare Tijdstippen Ophalen**
+### 3. **Calendar Information**
 
 ```
-GET /api/agenda/available-times?restaurant_id=ce326c61-ca96-4b55-aae0-04046f2bbb17&date=2024-01-15&party_size=4
+GET https://innovationstudio.be/api/agenda/calendar?restaurant_id=123&start_date=2024-01-01&end_date=2024-01-31
 ```
 
-**Response:**
+**Doel:** Haal kalender informatie op voor een datumbereik
 
-```json
-{
-  "success": true,
-  "date": "2024-01-15",
-  "available_times": ["17:00", "17:30", "18:00", "18:30", "20:00"],
-  "message": "Beschikbare tijdstippen voor 2024-01-15"
-}
-```
+## 📥 **Import in Make.com**
 
-## 🔧 Make.com Scenario Setup
+### **Stap 1: Download Blueprint**
 
-### **Scenario 1: Automatische Reservering**
+- Download het bestand: `RestoPlanner_Make_Blueprint.json`
 
-#### **Stap 1: Trigger (Webhook/Email/SMS)**
+### **Stap 2: Import in Make.com**
 
-- **Trigger:** Nieuwe reservering aanvraag
-- **Data:** Klantgegevens + gewenste datum/tijd
+1. Ga naar Make.com
+2. Klik op "Create a new scenario"
+3. Klik op "Import" (rechtsboven)
+4. Upload het `RestoPlanner_Make_Blueprint.json` bestand
+5. Klik "Import"
 
-#### **Stap 2: HTTP Request naar API**
+### **Stap 3: Configureer HTTP Modules**
+
+#### **Module 1: Health Check**
 
 ```
-Method: POST
-URL: https://jouw-domein.com/api/agenda/check-and-book
+URL: https://innovationstudio.be/api/health
+Method: GET
 Headers:
   Content-Type: application/json
-Body: {
-  "restaurant_id": "ce326c61-ca96-4b55-aae0-04046f2bbb17",
-  "requested_date": "{{trigger.date}}",
-  "requested_time": "{{trigger.time}}",
-  "customer_name": "{{trigger.customer_name}}",
-  "customer_email": "{{trigger.customer_email}}",
-  "customer_phone": "{{trigger.customer_phone}}",
-  "party_size": "{{trigger.party_size}}",
-  "auto_book": true
-}
+  Accept: application/json
 ```
 
-#### **Stap 3: Router (Beschikbaar/Niet Beschikbaar)**
+#### **Module 2: Free/Busy Information**
 
 ```
-Condition: {{response.available}} == true
+URL: https://innovationstudio.be/api/agenda/free-busy
+Method: GET
+Query Parameters:
+  restaurant_id: 123 (of jouw restaurant ID)
+  date: {{formatDate(now; 'YYYY-MM-DD')}}
 ```
 
-#### **Stap 4A: Beschikbaar - Bevestiging Sturen**
+#### **Module 3: Calendar Information**
 
 ```
-Action: Email/SMS
-To: {{trigger.customer_email}}
-Subject: Reservering Bevestigd
-Body: Uw reservering voor {{trigger.date}} om {{trigger.time}} is bevestigd.
+URL: https://innovationstudio.be/api/agenda/calendar
+Method: GET
+Query Parameters:
+  restaurant_id: 123 (of jouw restaurant ID)
+  start_date: {{formatDate(now; 'YYYY-MM-DD')}}
+  end_date: {{formatDate(addDays(now; 7); 'YYYY-MM-DD')}}
 ```
 
-#### **Stap 4B: Niet Beschikbaar - Alternatieven Sturen**
+## 🎯 **Praktische Voorbeelden**
+
+### **Voorbeeld 1: Dagelijkse Beschikbaarheid Check**
 
 ```
-Action: Email/SMS
-To: {{trigger.customer_email}}
-Subject: Alternatieve Tijdstippen
-Body: Het gewenste tijdstip is niet beschikbaar. Alternatieven: {{response.alternative_times}}
+Trigger: Schedule (elke dag om 9:00)
+Action: HTTP Request naar Free/Busy API
+Output: Email met beschikbare tijdsloten
 ```
 
-### **Scenario 2: Beschikbaarheid Check**
-
-#### **Stap 1: Trigger**
-
-- **Trigger:** Website formulier
-- **Data:** Gewenste datum/tijd
-
-#### **Stap 2: HTTP Request**
+### **Voorbeeld 2: Weekelijkse Planning**
 
 ```
-Method: POST
-URL: https://jouw-domein.com/api/agenda/check-availability
-Body: {
-  "restaurant_id": "ce326c61-ca96-4b55-aae0-04046f2bbb17",
-  "requested_date": "{{trigger.date}}",
-  "requested_time": "{{trigger.time}}",
-  "party_size": "{{trigger.party_size}}"
-}
+Trigger: Schedule (elke maandag om 8:00)
+Action: HTTP Request naar Calendar API
+Output: Rapport met alle reserveringen van de week
 ```
 
-#### **Stap 3: Response Verwerken**
+### **Voorbeeld 3: API Monitoring**
 
 ```
-Action: Webhook Response
-Data: {{response}}
+Trigger: Schedule (elke 5 minuten)
+Action: HTTP Request naar Health Check
+Output: Slack/Email alert bij API downtime
 ```
 
-## 📊 Make.com HTTP Module Configuratie
+## 🔧 **Configuratie Tips**
 
-### **Basis Configuratie:**
-
-- **URL:** `https://jouw-domein.com/api/agenda/check-and-book`
-- **Method:** `POST`
-- **Headers:**
-  - `Content-Type: application/json`
-- **Body:** JSON met reservering data
-
-### **Error Handling:**
+### **Dynamische Datums**
 
 ```javascript
-// In Make.com HTTP module
-if (response.status >= 400) {
-  // Handle error
-  throw new Error(`API Error: ${response.data.error}`);
-}
+// Vandaag
+{{formatDate(now; 'YYYY-MM-DD')}}
+
+// Morgen
+{{formatDate(addDays(now; 1); 'YYYY-MM-DD')}}
+
+// Volgende week
+{{formatDate(addDays(now; 7); 'YYYY-MM-DD')}}
+
+// Einde van de maand
+{{formatDate(lastDayOfMonth(now); 'YYYY-MM-DD')}}
 ```
 
-### **Response Mapping:**
+### **Error Handling**
 
 ```javascript
-// Map response data
-const isAvailable = response.data.available;
-const isBooked = response.data.booked;
-const reservationId = response.data.reservation?.id;
-const alternativeTimes = response.data.alternative_times;
+// Check of API response succesvol is
+{{if(1.success = true; "API OK"; "API Error")}}
+
+// Check aantal reserveringen
+{{if(1.total_reservations > 0; "Er zijn reserveringen"; "Geen reserveringen")}}
 ```
 
-## 🔄 Workflow Voorbeelden
+## 🚨 **Foutafhandeling**
 
-### **Workflow 1: Website Reservering**
+### **Veelvoorkomende Fouten**
 
-```
-1. Website Form → Make.com Webhook
-2. Make.com → API Check & Book
-3. API Response → Router
-4. Router → Email Bevestiging/Alternatieven
-5. Router → Database Update
-```
+| Fout                      | Oorzaak              | Oplossing                       |
+| ------------------------- | -------------------- | ------------------------------- |
+| 404 Not Found             | API niet bereikbaar  | Controleer URL en server status |
+| 400 Bad Request           | Parameters ontbreken | Vul alle verplichte velden in   |
+| 500 Internal Server Error | Database fout        | Controleer server logs          |
 
-### **Workflow 2: Telefoon Reservering**
+### **Retry Logic**
 
-```
-1. Telefoon Call → Manual Entry
-2. Manual Entry → API Check & Book
-3. API Response → SMS Bevestiging
-4. API Response → Restaurant Notificatie
+```javascript
+// Automatische retry bij fouten
+Max retries: 3
+Retry delay: 30 seconds
 ```
 
-### **Workflow 3: Email Reservering**
+## 📊 **Data Mapping**
 
-```
-1. Email → Email Parser
-2. Email Parser → API Check & Book
-3. API Response → Email Reply
-4. API Response → Calendar Update
-```
+### **Free/Busy Response Mapping**
 
-## 🛠️ Troubleshooting
+```javascript
+// Beschikbare tijdsloten
+{{map(1.free_busy_periods; "type = 'free'")}}
 
-### **Veelvoorkomende Fouten:**
+// Bezette tijdsloten
+{{map(1.free_busy_periods; "type = 'busy'")}}
 
-#### **1. "restaurant_id is verplicht"**
-
-```json
-// Zorg dat je restaurant_id correct is
-{
-  "restaurant_id": "ce326c61-ca96-4b55-aae0-04046f2bbb17"
-}
+// Totaal aantal reserveringen
+{{1.total_reservations}}
 ```
 
-#### **2. "requested_date is verplicht"**
+### **Calendar Response Mapping**
 
-```json
-// Gebruik YYYY-MM-DD formaat
-{
-  "requested_date": "2024-01-15"
-}
+```javascript
+// Alle datums met reserveringen
+{{map(1.calendar_data; "total_reservations > 0")}}
+
+// Totaal aantal gasten
+{{sum(1.calendar_data.total_party_size)}}
 ```
 
-#### **3. "requested_time is verplicht"**
+## 🔐 **Security**
 
-```json
-// Gebruik HH:MM formaat
-{
-  "requested_time": "19:00"
-}
+### **API Keys**
+
+- Momenteel geen API key vereist
+- Alle endpoints zijn publiek toegankelijk
+- CORS is geconfigureerd voor alle origins
+
+### **Rate Limiting**
+
+- Geen specifieke rate limits
+- Gebruik redelijke intervallen (minimaal 30 seconden)
+
+## 📞 **Support**
+
+### **Test de API's**
+
+```bash
+# Health Check
+curl https://innovationstudio.be/api/health
+
+# Free/Busy
+curl "https://innovationstudio.be/api/agenda/free-busy?restaurant_id=123&date=2024-01-15"
+
+# Calendar
+curl "https://innovationstudio.be/api/agenda/calendar?restaurant_id=123&start_date=2024-01-01&end_date=2024-01-31"
 ```
 
-### **Testing in Make.com:**
+### **Contact**
 
-1. **Test met kleine data set**
-2. **Controleer response format**
-3. **Test error scenarios**
-4. **Monitor API logs**
+- API Status: https://innovationstudio.be/api/health
+- Website: https://innovationstudio.be
+- Database: Supabase (echte data)
 
-## 📈 Monitoring & Analytics
+## ✅ **Checklist**
 
-### **API Metrics:**
+- [ ] Blueprint geïmporteerd in Make.com
+- [ ] HTTP modules geconfigureerd
+- [ ] Parameters aangepast naar jouw restaurant
+- [ ] Health Check getest
+- [ ] Free/Busy API getest
+- [ ] Calendar API getest
+- [ ] Error handling geconfigureerd
+- [ ] Workflow geactiveerd
 
-- **Requests per dag**
-- **Success rate**
-- **Response times**
-- **Error rates**
+---
 
-### **Make.com Analytics:**
-
-- **Scenario executions**
-- **Success/failure rates**
-- **Processing times**
-- **Data throughput**
-
-## 🔒 Security
-
-### **API Key Authentication:**
-
-```json
-// Voeg API key toe aan headers
-{
-  "Authorization": "Bearer YOUR_API_KEY",
-  "Content-Type": "application/json"
-}
-```
-
-### **Rate Limiting:**
-
-- **Max 100 requests/minuut per IP**
-- **Max 1000 requests/dag per restaurant**
-
-### **Data Validation:**
-
-- **Input sanitization**
-- **Date/time validation**
-- **Email format validation**
-
-## 🎉 Resultaat
-
-Na setup heb je:
-
-- ✅ **Automatische reserveringen** via Make.com
-- ✅ **Real-time beschikbaarheid checks**
-- ✅ **Automatische alternatieven suggesties**
-- ✅ **Email/SMS bevestigingen**
-- ✅ **Database synchronisatie**
-
-Je restaurant kan nu automatisch reserveringen verwerken via Make.com! 🚀
+**🎉 Gefeliciteerd! Je RestoPlanner API's zijn nu geïntegreerd in Make.com!**
