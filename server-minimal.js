@@ -861,8 +861,9 @@ server.listen(PORT, () => {
   console.log(`🗄️ Supabase database verbonden: ${supabaseUrl}`);
   console.log(`✅ Echte data beschikbaar via API endpoints!`);
   console.log(`📋 Nieuwe endpoints toegevoegd:`);
-  console.log(`   - POST /api/reservations/check-availability`);
-  console.log(`   - POST /api/reservations/book`);
+  console.log(`   - POST /api/reservations/check-availability (MET CAPACITEITSCONTROLE)`);
+  console.log(`   - POST /api/reservations/book (MET CAPACITEITSCONTROLE)`);
   console.log(`   - PUT /api/reservations/update`);
   console.log(`   - DELETE /api/reservations/delete`);
+  console.log(`   - GET /api/restaurant/capacity`);
 });
