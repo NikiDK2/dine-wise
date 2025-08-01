@@ -428,14 +428,33 @@ async function handleBookReservation(req, res) {
       return;
     }
 
-    // Gebruik vaste restaurant ID
-    const restaurantId = RESTAURANT_ID;
+    // Haal eerst een restaurant op uit de database
+    const { data: restaurants, error: restaurantError } = await supabase
+      .from('restaurants')
+      .select('id')
+      .limit(1)
+      .order('created_at', { ascending: false });
 
-    // Gebruik echte Supabase database met bestaande restaurant
+    if (restaurantError || !restaurants || restaurants.length === 0) {
+      console.error("Geen restaurants gevonden:", restaurantError);
+      res.writeHead(500, { "Content-Type": "application/json" });
+      res.end(
+        JSON.stringify({
+          success: false,
+          error: "Geen restaurants gevonden in database",
+          details: restaurantError?.message || "Database is leeg",
+        })
+      );
+      return;
+    }
+
+    const restaurantId = restaurants[0].id;
+
+    // Gebruik echte Supabase database
     const { data: newReservation, error } = await supabase
       .from('reservations')
       .insert({
-        restaurant_id: restaurantId, // Gebruik bestaande restaurant ID
+        restaurant_id: restaurantId,
         reservation_date,
         reservation_time,
         customer_name,
