@@ -2,7 +2,7 @@ const http = require("http");
 const fs = require("fs");
 const path = require("path");
 
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3000;
 
 const server = http.createServer((req, res) => {
   console.log("Request:", req.method, req.url);
@@ -166,9 +166,10 @@ const server = http.createServer((req, res) => {
 
 server.listen(PORT, () => {
   console.log(
-    `🚀 RestoPlanner API draait op poort ${PORT} - MINIMALISTISCHE VERSIE`
+    `🚀 RestoPlanner API draait op poort ${PORT} - COMBELL COMPATIBELE VERSIE`
   );
   console.log(`📡 API beschikbaar op: http://localhost:${PORT}/api/health`);
   console.log(`🏥 Health check: http://localhost:${PORT}/health`);
   console.log(`🌐 Frontend beschikbaar op: http://localhost:${PORT}`);
+  console.log(`✅ Geen path-to-regexp problemen meer!`);
 });
