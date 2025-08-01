@@ -4,11 +4,12 @@ const path = require("path");
 const { createClient } = require("@supabase/supabase-js");
 
 const PORT = process.env.PORT || 3000;
+const RESTAURANT_ID = process.env.RESTAURANT_ID || "550e8400-e29b-41d4-a716-446655440000";
 
 // Supabase client configuratie
 const supabaseUrl = process.env.VITE_SUPABASE_URL || "https://uhrwgjwgdgpgrzbdodgr.supabase.co";
-// Gebruik service role key voor volledige database toegang
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVocndnandnZGdwZ3J6YmRvZGdyIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1MzYwOTUwOCwiZXhwIjoyMDY5MTg1NTA4fQ.Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8Ej8";
+// Gebruik anonieme key (werkt voor publieke data)
+const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVocndnandnZGdwZ3J6YmRvZGdyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM2MDk1MDgsImV4cCI6MjA2OTE4NTUwOH0.GrgI-4xwg66tfBBNIjkil5nNEqawiPHMBcBRETM1sBU";
 
 const supabase = createClient(supabaseUrl, supabaseKey, {
   auth: {
@@ -186,33 +187,14 @@ async function handleFreeBusy(req, res) {
       return;
     }
 
-    // Haal eerst het eerste restaurant op uit de database
-    const { data: restaurants, error: restaurantError } = await supabase
-      .from('restaurants')
-      .select('id')
-      .limit(1)
-      .order('created_at', { ascending: false });
+    // Gebruik vaste restaurant ID
+    const restaurantId = RESTAURANT_ID;
 
-    if (restaurantError || !restaurants || restaurants.length === 0) {
-      console.error("Geen restaurants gevonden:", restaurantError);
-      res.writeHead(500, { "Content-Type": "application/json" });
-      res.end(
-        JSON.stringify({
-          success: false,
-          error: "Geen restaurants gevonden in database",
-          details: restaurantError?.message || "Database is leeg",
-        })
-      );
-      return;
-    }
-
-    const restaurantId = restaurants[0].id;
-
-    // Haal reserveringen op van Supabase met bestaande restaurant
+    // Haal reserveringen op van Supabase
     const { data: reservations, error } = await supabase
       .from("reservations")
       .select("*")
-      .eq("restaurant_id", restaurantId) // Gebruik bestaande restaurant ID
+      .eq("restaurant_id", restaurantId)
       .eq("reservation_date", date)
       .not("status", "eq", "cancelled");
 
