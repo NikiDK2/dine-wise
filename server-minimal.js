@@ -355,13 +355,38 @@ async function handleCheckAvailability(req, res) {
     // Gebruik vaste restaurant ID
     const restaurantId = RESTAURANT_ID;
 
-    // Gebruik echte Supabase database
-    const { data: conflictingReservations, error } = await supabase
+    // 1. Haal totale restaurant capaciteit op
+    const { data: tables, error: tablesError } = await supabase
+      .from('restaurant_tables')
+      .select('id, table_number, capacity, status')
+      .eq('restaurant_id', restaurantId)
+      .eq('is_active', true);
+
+    if (tablesError) {
+      console.error("Supabase error:", tablesError);
+      res.writeHead(500, { "Content-Type": "application/json" });
+      res.end(
+        JSON.stringify({
+          success: false,
+          error: "Database fout",
+          details: tablesError.message,
+        })
+      );
+      return;
+    }
+
+    const totalCapacity = tables.reduce((sum, table) => sum + table.capacity, 0);
+
+    // 2. Haal alle reserveringen op voor het gewenste tijdsslot (15 minuten overlap)
+    const requestedTime = new Date(`2000-01-01T${requested_time}:00`);
+    const timeSlotStart = new Date(requestedTime.getTime() - 15 * 60 * 1000); // 15 min voor
+    const timeSlotEnd = new Date(requestedTime.getTime() + 15 * 60 * 1000);   // 15 min na
+    
+    const { data: overlappingReservations, error } = await supabase
       .from('reservations')
       .select('id, customer_name, reservation_time, party_size')
       .eq('restaurant_id', restaurantId)
       .eq('reservation_date', requested_date)
-      .eq('reservation_time', requested_time)
       .not('status', 'eq', 'cancelled');
 
     if (error) {
@@ -377,7 +402,17 @@ async function handleCheckAvailability(req, res) {
       return;
     }
 
-    const isAvailable = conflictingReservations.length === 0;
+    // 3. Filter reserveringen die overlappen met het gewenste tijdsslot
+    const conflictingReservations = overlappingReservations.filter(reservation => {
+      const reservationTime = new Date(`2000-01-01T${reservation.reservation_time}:00`);
+      return reservationTime >= timeSlotStart && reservationTime <= timeSlotEnd;
+    });
+
+    // 4. Bereken totale bezette capaciteit in het tijdsslot
+    const occupiedCapacity = conflictingReservations.reduce((sum, res) => sum + res.party_size, 0);
+    const availableCapacity = totalCapacity - occupiedCapacity;
+    const isAvailable = availableCapacity >= party_size;
+
     const alternativeTimes = generateAlternativeTimes(requested_time);
 
     res.writeHead(200, { "Content-Type": "application/json" });
@@ -388,11 +423,14 @@ async function handleCheckAvailability(req, res) {
         requested_date,
         requested_time,
         party_size,
+        total_restaurant_capacity: totalCapacity,
+        occupied_capacity: occupiedCapacity,
+        available_capacity: availableCapacity,
         conflicting_reservations: conflictingReservations,
         alternative_times: alternativeTimes,
         message: isAvailable 
-          ? `Tijdstip ${requested_time} is beschikbaar voor ${party_size} personen (echte database)`
-          : `Tijdstip ${requested_time} is niet beschikbaar, hier zijn alternatieven (echte database)`,
+          ? `Tijdstip ${requested_time} is beschikbaar voor ${party_size} personen (${availableCapacity}/${totalCapacity} capaciteit vrij)`
+          : `Tijdstip ${requested_time} is niet beschikbaar voor ${party_size} personen (${availableCapacity}/${totalCapacity} capaciteit vrij)`,
       })
     );
   } catch (error) {
@@ -456,7 +494,78 @@ async function handleBookReservation(req, res) {
 
     const restaurantId = restaurants[0].id;
 
-    // Gebruik echte Supabase database
+    // 1. Check eerst beschikbaarheid en capaciteit
+    const { data: tables, error: tablesError } = await supabase
+      .from('restaurant_tables')
+      .select('id, table_number, capacity, status')
+      .eq('restaurant_id', restaurantId)
+      .eq('is_active', true);
+
+    if (tablesError) {
+      console.error("Supabase error:", tablesError);
+      res.writeHead(500, { "Content-Type": "application/json" });
+      res.end(
+        JSON.stringify({
+          success: false,
+          error: "Database fout",
+          details: tablesError.message,
+        })
+      );
+      return;
+    }
+
+    const totalCapacity = tables.reduce((sum, table) => sum + table.capacity, 0);
+
+    // 2. Check overlappende reserveringen (15 minuten overlap)
+    const requestedTime = new Date(`2000-01-01T${reservation_time}:00`);
+    const timeSlotStart = new Date(requestedTime.getTime() - 15 * 60 * 1000);
+    const timeSlotEnd = new Date(requestedTime.getTime() + 15 * 60 * 1000);
+    
+    const { data: overlappingReservations, error: overlapError } = await supabase
+      .from('reservations')
+      .select('id, customer_name, reservation_time, party_size')
+      .eq('restaurant_id', restaurantId)
+      .eq('reservation_date', reservation_date)
+      .not('status', 'eq', 'cancelled');
+
+    if (overlapError) {
+      console.error("Supabase error:", overlapError);
+      res.writeHead(500, { "Content-Type": "application/json" });
+      res.end(
+        JSON.stringify({
+          success: false,
+          error: "Database fout",
+          details: overlapError.message,
+        })
+      );
+      return;
+    }
+
+    const conflictingReservations = overlappingReservations.filter(reservation => {
+      const reservationTime = new Date(`2000-01-01T${reservation.reservation_time}:00`);
+      return reservationTime >= timeSlotStart && reservationTime <= timeSlotEnd;
+    });
+
+    const occupiedCapacity = conflictingReservations.reduce((sum, res) => sum + res.party_size, 0);
+    const availableCapacity = totalCapacity - occupiedCapacity;
+
+    if (availableCapacity < party_size) {
+      res.writeHead(400, { "Content-Type": "application/json" });
+      res.end(
+        JSON.stringify({
+          success: false,
+          error: "Onvoldoende capaciteit",
+          details: `Niet genoeg plaats voor ${party_size} personen. Beschikbaar: ${availableCapacity}/${totalCapacity}`,
+          total_restaurant_capacity: totalCapacity,
+          occupied_capacity: occupiedCapacity,
+          available_capacity: availableCapacity,
+          conflicting_reservations: conflictingReservations,
+        })
+      );
+      return;
+    }
+
+    // 3. Maak de reservering aan
     const { data: newReservation, error } = await supabase
       .from('reservations')
       .insert({
