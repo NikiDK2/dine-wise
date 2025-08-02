@@ -356,18 +356,18 @@ async function handleCheckAvailability(req, res) {
     const restaurantId = RESTAURANT_ID;
 
     // 1. Gebruik default restaurant instellingen (omdat restaurant niet bestaat in database)
-    const restaurant = {
-      id: restaurantId,
-      name: "Default Restaurant",
-      opening_hours: {
-        monday: { open: "17:00", close: "22:00" },
-        tuesday: { open: "17:00", close: "22:00" },
-        wednesday: { open: "17:00", close: "22:00" },
-        thursday: { open: "17:00", close: "22:00" },
-        friday: { open: "17:00", close: "23:00" },
-        saturday: { open: "17:00", close: "23:00" },
-        sunday: { open: "17:00", close: "22:00" }
-      },
+    const       restaurant = {
+        id: restaurantId,
+        name: "Default Restaurant",
+        opening_hours: {
+          monday: { open: "08:30", close: "16:00" },
+          tuesday: { open: "08:30", close: "16:00" },
+          wednesday: { open: "08:30", close: "16:00" },
+          thursday: { open: "08:30", close: "16:00" },
+          friday: { open: "08:30", close: "16:00" },
+          saturday: { open: "08:30", close: "16:00" },
+          sunday: { open: "08:30", close: "16:00" }
+        },
       settings: {
         max_party_size: 20,
         min_party_size: 1,
