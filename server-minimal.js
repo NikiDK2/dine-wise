@@ -355,8 +355,46 @@ async function handleCheckAvailability(req, res) {
     // Gebruik vaste restaurant ID
     const restaurantId = RESTAURANT_ID;
 
-    // 1. Gebruik default restaurant instellingen (omdat restaurant niet bestaat in database)
-    const       restaurant = {
+    // 1. Haal restaurant instellingen op uit database
+    let restaurant = null;
+    
+    try {
+      const { data: restaurantData, error: restaurantError } = await supabase
+        .from('restaurants')
+        .select('id, name, opening_hours, settings')
+        .eq('id', restaurantId)
+        .single();
+
+      if (restaurantError) {
+        console.error("Supabase error bij ophalen restaurant:", restaurantError);
+        // Gebruik default instellingen als restaurant niet bestaat
+        restaurant = {
+          id: restaurantId,
+          name: "Default Restaurant",
+          opening_hours: {
+            monday: { open: "08:30", close: "16:00" },
+            tuesday: { open: "08:30", close: "16:00" },
+            wednesday: { open: "08:30", close: "16:00" },
+            thursday: { open: "08:30", close: "16:00" },
+            friday: { open: "08:30", close: "16:00" },
+            saturday: { open: "08:30", close: "16:00" },
+            sunday: { open: "08:30", close: "16:00" }
+          },
+          settings: {
+            max_party_size: 20,
+            min_party_size: 1,
+            max_reservations_per_slot: 10,
+            reservation_duration_minutes: 120
+          }
+        };
+      } else {
+        restaurant = restaurantData;
+        console.log("✅ Restaurant instellingen opgehaald uit database:", restaurant.name);
+      }
+    } catch (error) {
+      console.error("Error bij ophalen restaurant:", error);
+      // Gebruik default instellingen bij fout
+      restaurant = {
         id: restaurantId,
         name: "Default Restaurant",
         opening_hours: {
@@ -368,13 +406,14 @@ async function handleCheckAvailability(req, res) {
           saturday: { open: "08:30", close: "16:00" },
           sunday: { open: "08:30", close: "16:00" }
         },
-      settings: {
-        max_party_size: 20,
-        min_party_size: 1,
-        max_reservations_per_slot: 10,
-        reservation_duration_minutes: 120
-      }
-    };
+        settings: {
+          max_party_size: 20,
+          min_party_size: 1,
+          max_reservations_per_slot: 10,
+          reservation_duration_minutes: 120
+        }
+      };
+    }
 
     // 2. Check openingstijden
     const requestedDate = new Date(requested_date);
