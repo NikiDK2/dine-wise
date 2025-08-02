@@ -71,7 +71,7 @@ const server = http.createServer(async (req, res) => {
     res.end(
       JSON.stringify({
         status: "OK",
-        message: "RestoPlanner Health Check - MET SUPABASE DATABASE",
+        message: "RestoPlanner Health Check - MET SUPABASE DATABASE - JUISTE OPENINGSTIJDEN 08:30-16:00",
         timestamp: new Date().toISOString(),
       })
     );
