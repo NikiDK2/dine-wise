@@ -414,6 +414,7 @@ async function handleCheckAvailability(req, res) {
     const minPartySize = settings.min_party_size || 1;
     const maxReservationsPerSlot = settings.max_reservations_per_slot || 10;
     const reservationDuration = settings.reservation_duration_minutes || 120; // 2 uur standaard
+    const largeGroupThreshold = settings.large_group_threshold || 6; // Groepen > 6 personen
 
     if (party_size < minPartySize || party_size > maxPartySize) {
       res.writeHead(400, { "Content-Type": "application/json" });
@@ -426,6 +427,9 @@ async function handleCheckAvailability(req, res) {
       );
       return;
     }
+
+    // Check of dit een grote groep is (vereist handmatige goedkeuring)
+    const isLargeGroup = party_size > largeGroupThreshold;
 
     // 4. Haal totale restaurant capaciteit op
     let tables = [];
@@ -523,14 +527,17 @@ async function handleCheckAvailability(req, res) {
           min_party_size: minPartySize,
           max_reservations_per_slot: maxReservationsPerSlot,
           reservation_duration_minutes: reservationDuration,
+          large_group_threshold: largeGroupThreshold,
         },
+        is_large_group: isLargeGroup,
+        large_group_warning: isLargeGroup ? "Voor groepen van meer dan 6 personen sturen wij uw aanvraag door naar het restaurant. U ontvangt binnen 24 uur een bevestiging." : null,
         total_restaurant_capacity: totalCapacity,
         occupied_capacity: occupiedCapacity,
         available_capacity: availableCapacity,
         conflicting_reservations: conflictingReservations,
         alternative_times: alternativeTimes,
         message: isAvailable 
-          ? `Tijdstip ${requested_time} is beschikbaar voor ${party_size} personen (${availableCapacity}/${totalCapacity} capaciteit vrij)`
+          ? `Tijdstip ${requested_time} is beschikbaar voor ${party_size} personen (${availableCapacity}/${totalCapacity} capaciteit vrij)${isLargeGroup ? ' - Handmatige goedkeuring vereist' : ''}`
           : `Tijdstip ${requested_time} is niet beschikbaar voor ${party_size} personen (${availableCapacity}/${totalCapacity} capaciteit vrij)`,
       })
     );
@@ -666,7 +673,11 @@ async function handleBookReservation(req, res) {
       return;
     }
 
-    // 3. Maak de reservering aan
+    // 3. Bepaal status op basis van groepsgrootte
+    const isLargeGroup = party_size > 6; // Groepen > 6 personen
+    const reservationStatus = isLargeGroup ? "pending" : "confirmed";
+
+    // 4. Maak de reservering aan
     const { data: newReservation, error } = await supabase
       .from('reservations')
       .insert({
@@ -678,7 +689,7 @@ async function handleBookReservation(req, res) {
         customer_phone: customer_phone || "",
         party_size,
         special_requests: notes || "",
-        status: "confirmed"
+        status: reservationStatus
       })
       .select()
       .single();
@@ -702,7 +713,11 @@ async function handleBookReservation(req, res) {
         success: true,
         booked: true,
         reservation: newReservation,
-        message: `Reservering succesvol aangemaakt voor ${customer_name} (echte database)`,
+        is_large_group: isLargeGroup,
+        large_group_warning: isLargeGroup ? "Voor groepen van meer dan 6 personen sturen wij uw aanvraag door naar het restaurant. U ontvangt binnen 24 uur een bevestiging." : null,
+        message: isLargeGroup 
+          ? `Reservering voor ${customer_name} is aangemaakt en wacht op handmatige goedkeuring (24 uur)`
+          : `Reservering succesvol aangemaakt voor ${customer_name} (echte database)`,
       })
     );
   } catch (error) {
