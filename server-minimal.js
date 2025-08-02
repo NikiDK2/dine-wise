@@ -428,26 +428,31 @@ async function handleCheckAvailability(req, res) {
     }
 
     // 4. Haal totale restaurant capaciteit op
-    const { data: tables, error: tablesError } = await supabase
-      .from('restaurant_tables')
-      .select('id, table_number, capacity, status')
-      .eq('restaurant_id', restaurantId)
-      .eq('is_active', true);
+    let tables = [];
+    let totalCapacity = 0;
+    
+    try {
+      const { data: restaurantTables, error: tablesError } = await supabase
+        .from('restaurant_tables')
+        .select('id, table_number, capacity, status')
+        .eq('restaurant_id', restaurantId)
+        .eq('is_active', true);
 
-    if (tablesError) {
-      console.error("Supabase error:", tablesError);
-      res.writeHead(500, { "Content-Type": "application/json" });
-      res.end(
-        JSON.stringify({
-          success: false,
-          error: "Database fout",
-          details: tablesError.message,
-        })
-      );
-      return;
+      if (tablesError) {
+        console.error("Supabase error:", tablesError);
+        // Gebruik default capaciteit als er geen tafels zijn
+        totalCapacity = 30; // Default capaciteit
+      } else {
+        tables = restaurantTables || [];
+        totalCapacity = tables.reduce((sum, table) => sum + table.capacity, 0);
+        if (totalCapacity === 0) {
+          totalCapacity = 30; // Default capaciteit als er geen tafels zijn
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching tables:", error);
+      totalCapacity = 30; // Default capaciteit
     }
-
-    const totalCapacity = tables.reduce((sum, table) => sum + table.capacity, 0);
 
     // 5. Haal alle reserveringen op voor het gewenste tijdsslot (reserveringsduur overlap)
     const requestedTime = new Date(`2000-01-01T${requested_time}:00`);
