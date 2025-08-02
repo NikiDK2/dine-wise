@@ -454,24 +454,25 @@ async function handleCheckAvailability(req, res) {
     const timeSlotStart = new Date(requestedTime.getTime() - 15 * 60 * 1000); // 15 min voor
     const timeSlotEnd = new Date(requestedTime.getTime() + reservationDuration * 60 * 1000); // reserveringsduur na
     
-    const { data: overlappingReservations, error } = await supabase
-      .from('reservations')
-      .select('id, customer_name, reservation_time, party_size')
-      .eq('restaurant_id', restaurantId)
-      .eq('reservation_date', requested_date)
-      .not('status', 'eq', 'cancelled');
+    let overlappingReservations = [];
+    try {
+      const { data: reservations, error } = await supabase
+        .from('reservations')
+        .select('id, customer_name, reservation_time, party_size')
+        .eq('restaurant_id', restaurantId)
+        .eq('reservation_date', requested_date)
+        .not('status', 'eq', 'cancelled');
 
-    if (error) {
-      console.error("Supabase error:", error);
-      res.writeHead(500, { "Content-Type": "application/json" });
-      res.end(
-        JSON.stringify({
-          success: false,
-          error: "Database fout",
-          details: error.message,
-        })
-      );
-      return;
+      if (error) {
+        console.error("Supabase error:", error);
+        // Gebruik lege array als er een fout is
+        overlappingReservations = [];
+      } else {
+        overlappingReservations = reservations || [];
+      }
+    } catch (error) {
+      console.error("Error fetching reservations:", error);
+      overlappingReservations = [];
     }
 
     // 3. Filter reserveringen die overlappen met het gewenste tijdsslot
