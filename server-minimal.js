@@ -914,7 +914,7 @@ function generateAlternativeTimes(requestedTime) {
     if (i === 0) continue; // Skip het gewenste tijdstip
     const alternativeTime = new Date(baseTime.getTime() + i * 30 * 60 * 1000);
     const timeString = alternativeTime.toTimeString().slice(0, 5);
-    if (timeString >= "17:00" && timeString <= "22:00") {
+    if (timeString >= "08:30" && timeString <= "16:00") {
       alternatives.push(timeString);
     }
   }
