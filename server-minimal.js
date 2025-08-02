@@ -980,7 +980,7 @@ async function handleGetRestaurantCapacity(req, res) {
 
 server.listen(PORT, () => {
   console.log(
-    `🚀 RestoPlanner API draait op poort ${PORT} - MET SUPABASE DATABASE`
+    `🚀 RestoPlanner API draait op poort ${PORT} - MET SUPABASE DATABASE - JUISTE OPENINGSTIJDEN 08:30-16:00`
   );
   console.log(`📡 API beschikbaar op: http://localhost:${PORT}/api/health`);
   console.log(`🏥 Health check: http://localhost:${PORT}/health`);
