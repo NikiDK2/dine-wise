@@ -402,7 +402,7 @@ async function handleCheckAvailability(req, res) {
         JSON.stringify({
           success: false,
           error: "Buiten openingstijden",
-          details: `Restaurant is open van ${dayHours.open} tot ${dayHours.close}`,
+          details: `Restaurant is open van ${dayHours.open} tot ${dayHours.close}. Uw gewenste tijdstip ${requestedTimeStr} valt buiten deze openingstijden.`,
         })
       );
       return;
@@ -512,6 +512,16 @@ async function handleCheckAvailability(req, res) {
 
     const alternativeTimes = generateAlternativeTimes(requested_time);
 
+    // Bepaal de reden waarom het niet beschikbaar is
+    let unavailabilityReason = null;
+    if (!isAvailable) {
+      if (availableCapacity === 0) {
+        unavailabilityReason = "Tijdsslot is volledig bezet";
+      } else if (availableCapacity < party_size) {
+        unavailabilityReason = `Onvoldoende capaciteit (${availableCapacity} beschikbaar, ${party_size} gevraagd)`;
+      }
+    }
+
     res.writeHead(200, { "Content-Type": "application/json" });
     res.end(
       JSON.stringify({
@@ -536,9 +546,10 @@ async function handleCheckAvailability(req, res) {
         available_capacity: availableCapacity,
         conflicting_reservations: conflictingReservations,
         alternative_times: alternativeTimes,
+        unavailability_reason: unavailabilityReason,
         message: isAvailable 
           ? `Tijdstip ${requested_time} is beschikbaar voor ${party_size} personen (${availableCapacity}/${totalCapacity} capaciteit vrij)${isLargeGroup ? ' - Handmatige goedkeuring vereist' : ''}`
-          : `Tijdstip ${requested_time} is niet beschikbaar voor ${party_size} personen (${availableCapacity}/${totalCapacity} capaciteit vrij)`,
+          : `Tijdstip ${requested_time} is niet beschikbaar voor ${party_size} personen: ${unavailabilityReason}`,
       })
     );
   } catch (error) {
