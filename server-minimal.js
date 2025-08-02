@@ -355,49 +355,26 @@ async function handleCheckAvailability(req, res) {
     // Gebruik vaste restaurant ID
     const restaurantId = RESTAURANT_ID;
 
-    // 1. Haal restaurant instellingen op (of gebruik defaults als restaurant niet bestaat)
-    let { data: restaurant, error: restaurantError } = await supabase
-      .from('restaurants')
-      .select('id, name, opening_hours, settings')
-      .eq('id', restaurantId)
-      .single();
-
-    if (restaurantError) {
-      console.log("Restaurant niet gevonden, gebruik defaults:", restaurantError.message);
-      // Gebruik default restaurant instellingen
-      restaurant = {
-        id: restaurantId,
-        name: "Default Restaurant",
-        opening_hours: {
-          monday: { open: "17:00", close: "22:00" },
-          tuesday: { open: "17:00", close: "22:00" },
-          wednesday: { open: "17:00", close: "22:00" },
-          thursday: { open: "17:00", close: "22:00" },
-          friday: { open: "17:00", close: "23:00" },
-          saturday: { open: "17:00", close: "23:00" },
-          sunday: { open: "17:00", close: "22:00" }
-        },
-        settings: {
-          max_party_size: 20,
-          min_party_size: 1,
-          max_reservations_per_slot: 10,
-          reservation_duration_minutes: 120
-        }
-      };
-    }
-
-    if (restaurantError) {
-      console.error("Supabase error:", restaurantError);
-      res.writeHead(500, { "Content-Type": "application/json" });
-      res.end(
-        JSON.stringify({
-          success: false,
-          error: "Database fout",
-          details: restaurantError.message,
-        })
-      );
-      return;
-    }
+    // 1. Gebruik default restaurant instellingen (omdat restaurant niet bestaat in database)
+    const restaurant = {
+      id: restaurantId,
+      name: "Default Restaurant",
+      opening_hours: {
+        monday: { open: "17:00", close: "22:00" },
+        tuesday: { open: "17:00", close: "22:00" },
+        wednesday: { open: "17:00", close: "22:00" },
+        thursday: { open: "17:00", close: "22:00" },
+        friday: { open: "17:00", close: "23:00" },
+        saturday: { open: "17:00", close: "23:00" },
+        sunday: { open: "17:00", close: "22:00" }
+      },
+      settings: {
+        max_party_size: 20,
+        min_party_size: 1,
+        max_reservations_per_slot: 10,
+        reservation_duration_minutes: 120
+      }
+    };
 
     // 2. Check openingstijden
     const requestedDate = new Date(requested_date);
