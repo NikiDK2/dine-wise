@@ -137,7 +137,7 @@ export default function CreateRestaurant() {
     setError(null);
 
     try {
-      await createRestaurant.mutateAsync({
+      const result = await createRestaurant.mutateAsync({
         name: formData.name,
         description: formData.description,
         address: formData.address,
@@ -150,12 +150,14 @@ export default function CreateRestaurant() {
 
       toast({
         title: "Restaurant aangemaakt!",
-        description:
-          "Uw restaurant is succesvol aangemaakt en klaar voor gebruik.",
+        description: `Uw restaurant is succesvol aangemaakt met ID: ${result.id}`,
       });
 
-      // Navigate to dashboard
-      navigate("/");
+      // Show success message with ID before navigating
+      setTimeout(() => {
+        navigate("/");
+      }, 3000);
+
     } catch (error: any) {
       console.error("Error creating restaurant:", error);
       const errorMessage = error?.message || "Onbekende fout opgetreden";

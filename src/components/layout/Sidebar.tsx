@@ -13,6 +13,7 @@ import {
   FileText,
   CalendarDays,
   Plus,
+  Building2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,7 @@ import { StatusBadge } from "@/components/ui/status-badge";
 
 const navigation = [
   { name: "Dashboard", href: "/", icon: Home, badge: undefined },
+  { name: "Restaurants", href: "/restaurants", icon: Building2, badge: undefined },
   { name: "Reserveringen", href: "/reservations", icon: Calendar, badge: "12" },
   {
     name: "Plattegrond",
