@@ -8,27 +8,22 @@ const { createClient } = require("@supabase/supabase-js");
 
 const PORT = process.env.PORT || 3000;
 
-// Environment variabelen controleren
-const RESTAURANT_ID = process.env.RESTAURANT_ID;
-const supabaseUrl = process.env.VITE_SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+// Environment variabelen controleren met fallbacks
+const RESTAURANT_ID = process.env.RESTAURANT_ID || "123";
+const supabaseUrl = process.env.VITE_SUPABASE_URL || "https://uhrwgjwgdgpgrzbdodgr.supabase.co";
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "sb_secret_KLpT35vdk51lib-LeKW8iw_splqhZW-";
 
-// Valideer verplichte environment variabelen
-if (!RESTAURANT_ID) {
-  console.error("❌ RESTAURANT_ID environment variabele is verplicht");
-  process.exit(1);
+// Waarschuw voor ontbrekende environment variabelen maar crash niet
+if (!process.env.RESTAURANT_ID) {
+  console.warn("⚠️  RESTAURANT_ID environment variabele niet gevonden, gebruik fallback: 123");
 }
 
-if (!supabaseUrl) {
-  console.error("❌ VITE_SUPABASE_URL environment variabele is verplicht");
-  process.exit(1);
+if (!process.env.VITE_SUPABASE_URL) {
+  console.warn("⚠️  VITE_SUPABASE_URL environment variabele niet gevonden, gebruik fallback");
 }
 
-if (!supabaseKey) {
-  console.error(
-    "❌ SUPABASE_SERVICE_ROLE_KEY environment variabele is verplicht"
-  );
-  process.exit(1);
+if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+  console.warn("⚠️  SUPABASE_SERVICE_ROLE_KEY environment variabele niet gevonden, gebruik fallback");
 }
 
 // Supabase client configuratie
