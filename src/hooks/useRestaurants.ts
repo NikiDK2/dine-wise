@@ -26,10 +26,15 @@ export function useRestaurants() {
     queryFn: async () => {
       if (!user) throw new Error('No authenticated user');
       
+      console.log("useRestaurants Debug - User ID:", user.id);
+      
       const { data, error } = await supabase
         .from('restaurants')
         .select('*')
+        .eq('owner_id', user.id)
         .order('created_at', { ascending: false });
+      
+      console.log("useRestaurants Debug - Query result:", { data, error });
       
       if (error) throw error;
       return data as Restaurant[];

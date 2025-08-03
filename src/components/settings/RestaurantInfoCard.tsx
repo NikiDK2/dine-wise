@@ -3,11 +3,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Building2, Copy, MapPin, Phone, Mail, Calendar, Hash } from "lucide-react";
+import { Building2, Copy, MapPin, Phone, Mail, Calendar, Hash, AlertCircle } from "lucide-react";
 
 export function RestaurantInfoCard() {
-  const { data: restaurants = [], isLoading } = useRestaurants();
+  const { data: restaurants = [], isLoading, error } = useRestaurants();
   const { toast } = useToast();
+
+  console.log("RestaurantInfoCard Debug:", { 
+    isLoading, 
+    error, 
+    restaurantsCount: restaurants.length,
+    restaurants: restaurants 
+  });
 
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
@@ -16,6 +23,30 @@ export function RestaurantInfoCard() {
       description: `${label} gekopieerd naar klembord`,
     });
   };
+
+  if (error) {
+    return (
+      <Card className="border-destructive">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-destructive">
+            <AlertCircle className="h-5 w-5" />
+            Fout bij laden restaurant informatie
+          </CardTitle>
+          <CardDescription>
+            Er is een fout opgetreden bij het ophalen van de restaurant gegevens
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <p className="text-muted-foreground mb-4">
+            Fout: {error.message || "Onbekende fout"}
+          </p>
+          <Button onClick={() => window.location.reload()}>
+            Pagina herladen
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -53,9 +84,12 @@ export function RestaurantInfoCard() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground mb-4">
             U heeft nog geen restaurants aangemaakt. Ga naar de Create Restaurant pagina om er een aan te maken.
           </p>
+          <Button onClick={() => window.location.href = '/create-restaurant'}>
+            Restaurant Aanmaken
+          </Button>
         </CardContent>
       </Card>
     );
