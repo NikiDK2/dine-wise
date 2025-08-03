@@ -17,25 +17,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Set up auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+    try {
+      // Set up auth state listener FIRST
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(
+        (event, session) => {
+          setSession(session);
+          setUser(session?.user ?? null);
+          setLoading(false);
+        }
+      );
+
+      // THEN check for existing session
+      supabase.auth.getSession().then(({ data: { session } }) => {
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
-      }
-    );
+      }).catch((error) => {
+        console.error("Error getting session:", error);
+        setError("Kon geen sessie ophalen");
+        setLoading(false);
+      });
 
-    // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
+      return () => subscription.unsubscribe();
+    } catch (error) {
+      console.error("Error setting up auth:", error);
+      setError("Kon authenticatie niet initialiseren");
       setLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
+    }
   }, []);
 
   const signUp = async (email: string, password: string, fullName: string) => {
@@ -85,7 +96,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    console.error('useAuth must be used within an AuthProvider');
+    // Return a fallback context instead of throwing
+    return {
+      user: null,
+      session: null,
+      loading: false,
+      signUp: async () => ({ error: new Error('Auth not initialized') }),
+      signIn: async () => ({ error: new Error('Auth not initialized') }),
+      signOut: async () => {},
+    };
   }
   return context;
 }

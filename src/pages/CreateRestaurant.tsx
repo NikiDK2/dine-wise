@@ -57,6 +57,13 @@ export default function CreateRestaurant() {
     return () => window.removeEventListener('error', handleError);
   }, []);
 
+  // Redirect if not authenticated - moved before conditional returns
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate("/auth");
+    }
+  }, [user, authLoading, navigate]);
+
   // Show loading state while auth is loading
   if (authLoading) {
     return (
@@ -96,11 +103,8 @@ export default function CreateRestaurant() {
     );
   }
 
-  // Redirect if not authenticated
+  // Show redirect message if not authenticated
   if (!user) {
-    useEffect(() => {
-      navigate("/auth");
-    }, [navigate]);
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
