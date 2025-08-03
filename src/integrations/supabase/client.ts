@@ -10,16 +10,16 @@ const SUPABASE_PUBLISHABLE_KEY =
   import.meta.env.VITE_SUPABASE_ANON_KEY ||
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVocndnandnZGdwZ3J6YmRvZGdyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM2MDk1MDgsImV4cCI6MjA2OTE4NTUwOH0.GrgI-4xwg66tfBBNIjkil5nNEqawiPHMBcBRETM1sBU";
 
-// Valideer environment variabelen in productie
+// Waarschuw voor ontbrekende environment variabelen in productie
 if (import.meta.env.PROD) {
   if (!import.meta.env.VITE_SUPABASE_URL) {
-    console.error(
-      "❌ VITE_SUPABASE_URL environment variabele is verplicht in productie"
+    console.warn(
+      "⚠️  VITE_SUPABASE_URL environment variabele niet gevonden, gebruik fallback"
     );
   }
   if (!import.meta.env.VITE_SUPABASE_ANON_KEY) {
-    console.error(
-      "❌ VITE_SUPABASE_ANON_KEY environment variabele is verplicht in productie"
+    console.warn(
+      "⚠️  VITE_SUPABASE_ANON_KEY environment variabele niet gevonden, gebruik fallback"
     );
   }
 }

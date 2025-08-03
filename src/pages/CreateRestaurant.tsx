@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useCreateRestaurant } from "@/hooks/useRestaurants";
 import { useAuth } from "@/components/auth/AuthContext";
@@ -35,19 +35,79 @@ import {
   Settings,
   ArrowLeft,
   Save,
+  AlertCircle,
 } from "lucide-react";
 
 export default function CreateRestaurant() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const createRestaurant = useCreateRestaurant();
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Catch any errors during component initialization
+  useEffect(() => {
+    const handleError = (event: ErrorEvent) => {
+      console.error("Global error caught:", event.error);
+      setError("Er is een fout opgetreden bij het laden van de pagina. Probeer de pagina te herladen.");
+    };
+
+    window.addEventListener('error', handleError);
+    return () => window.removeEventListener('error', handleError);
+  }, []);
+
+  // Show loading state while auth is loading
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Laden...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state if there's an error
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="container mx-auto px-4 py-8">
+          <div className="max-w-4xl mx-auto">
+            <Card className="border-destructive">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-destructive">
+                  <AlertCircle className="h-5 w-5" />
+                  Er is een fout opgetreden
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground mb-4">{error}</p>
+                <Button onClick={() => window.location.reload()}>
+                  Pagina herladen
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Redirect if not authenticated
   if (!user) {
-    navigate("/auth");
-    return null;
+    useEffect(() => {
+      navigate("/auth");
+    }, [navigate]);
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-muted-foreground">Doorverwijzen naar login...</p>
+        </div>
+      </div>
+    );
   }
 
   const [formData, setFormData] = useState({
@@ -115,6 +175,7 @@ export default function CreateRestaurant() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setError(null);
 
     try {
       await createRestaurant.mutateAsync({
@@ -136,11 +197,14 @@ export default function CreateRestaurant() {
 
       // Navigate to dashboard
       navigate("/");
-    } catch (error) {
+    } catch (error: any) {
+      console.error("Error creating restaurant:", error);
+      const errorMessage = error?.message || "Onbekende fout opgetreden";
+      setError(errorMessage);
+      
       toast({
         title: "Fout bij aanmaken",
-        description:
-          "Er is een fout opgetreden bij het aanmaken van het restaurant.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
