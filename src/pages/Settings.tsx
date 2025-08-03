@@ -2,6 +2,7 @@ import { Header } from "@/components/layout/Header";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { OpeningHoursForm } from "@/components/settings/OpeningHoursForm";
 import { CapacitySettingsForm } from "@/components/settings/CapacitySettingsForm";
+import { RestaurantInfoCard } from "@/components/settings/RestaurantInfoCard";
 import { Settings as SettingsIcon } from "lucide-react";
 
 export default function Settings() {
@@ -20,6 +21,7 @@ export default function Settings() {
               </div>
             </div>
             
+            <RestaurantInfoCard />
             <OpeningHoursForm />
             <CapacitySettingsForm />
           </div>
