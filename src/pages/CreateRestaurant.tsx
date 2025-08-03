@@ -39,12 +39,14 @@ import {
 } from "lucide-react";
 
 export default function CreateRestaurant() {
+  // ALLE hooks worden altijd aangeroepen
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const { toast } = useToast();
   const createRestaurant = useCreateRestaurant();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [shouldRedirect, setShouldRedirect] = useState(false);
 
   // Catch any errors during component initialization
   useEffect(() => {
@@ -57,62 +59,15 @@ export default function CreateRestaurant() {
     return () => window.removeEventListener('error', handleError);
   }, []);
 
-  // Redirect if not authenticated - moved before conditional returns
+  // Handle authentication redirect
   useEffect(() => {
     if (!authLoading && !user) {
-      navigate("/auth");
+      setShouldRedirect(true);
+      setTimeout(() => {
+        navigate("/auth");
+      }, 1000);
     }
   }, [user, authLoading, navigate]);
-
-  // Show loading state while auth is loading
-  if (authLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Laden...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Show error state if there's an error
-  if (error) {
-    return (
-      <div className="min-h-screen bg-background">
-        <Header />
-        <div className="container mx-auto px-4 py-8">
-          <div className="max-w-4xl mx-auto">
-            <Card className="border-destructive">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-destructive">
-                  <AlertCircle className="h-5 w-5" />
-                  Er is een fout opgetreden
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground mb-4">{error}</p>
-                <Button onClick={() => window.location.reload()}>
-                  Pagina herladen
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Show redirect message if not authenticated
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-muted-foreground">Doorverwijzen naar login...</p>
-        </div>
-      </div>
-    );
-  }
 
   const [formData, setFormData] = useState({
     name: "",
@@ -261,10 +216,61 @@ export default function CreateRestaurant() {
     { key: "sunday", label: "Zondag" },
   ];
 
+  // Render loading state
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Laden...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Render redirect state
+  if (shouldRedirect) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-muted-foreground">Doorverwijzen naar login...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Render error state
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="container mx-auto px-4 py-8">
+          <div className="max-w-4xl mx-auto">
+            <Card className="border-destructive">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-destructive">
+                  <AlertCircle className="h-5 w-5" />
+                  Er is een fout opgetreden
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground mb-4">{error}</p>
+                <Button onClick={() => window.location.reload()}>
+                  Pagina herladen
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Render main content - all hooks have been called
   return (
     <div className="min-h-screen bg-background">
       <Header />
-
+      
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto">
           {/* Header */}
