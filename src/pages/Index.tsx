@@ -1,4 +1,4 @@
-import { Navigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import {
   Calendar,
   Users,
@@ -24,6 +24,7 @@ import { CreateRestaurantModal } from "@/components/restaurant/CreateRestaurantM
 import { Button } from "@/components/ui/button";
 
 const Index = () => {
+  const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const { data: restaurants = [], isLoading: restaurantsLoading } =
     useRestaurants();
@@ -86,12 +87,14 @@ const Index = () => {
               </p>
             </div>
 
-            <CreateRestaurantModal>
-              <Button size="lg" className="gap-2">
-                <Plus className="h-5 w-5" />
-                Maak uw restaurant aan
-              </Button>
-            </CreateRestaurantModal>
+            <Button
+              size="lg"
+              className="gap-2"
+              onClick={() => navigate("/create-restaurant")}
+            >
+              <Plus className="h-5 w-5" />
+              Maak uw restaurant aan
+            </Button>
 
             <p className="text-muted-foreground text-sm">
               Eenmaal aangemaakt heeft u toegang tot het volledige restaurant

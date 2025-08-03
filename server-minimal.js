@@ -1,16 +1,37 @@
+// Load environment variables from .env file
+require("dotenv").config();
+
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
 const { createClient } = require("@supabase/supabase-js");
 
 const PORT = process.env.PORT || 3000;
-const RESTAURANT_ID = process.env.RESTAURANT_ID || "550e8400-e29b-41d4-a716-446655440000";
+
+// Environment variabelen controleren
+const RESTAURANT_ID = process.env.RESTAURANT_ID;
+const supabaseUrl = process.env.VITE_SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+// Valideer verplichte environment variabelen
+if (!RESTAURANT_ID) {
+  console.error("❌ RESTAURANT_ID environment variabele is verplicht");
+  process.exit(1);
+}
+
+if (!supabaseUrl) {
+  console.error("❌ VITE_SUPABASE_URL environment variabele is verplicht");
+  process.exit(1);
+}
+
+if (!supabaseKey) {
+  console.error(
+    "❌ SUPABASE_SERVICE_ROLE_KEY environment variabele is verplicht"
+  );
+  process.exit(1);
+}
 
 // Supabase client configuratie
-const supabaseUrl = process.env.VITE_SUPABASE_URL || "https://uhrwgjwgdgpgrzbdodgr.supabase.co";
-// Gebruik service role key voor volledige database toegang
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "sb_secret_KLpT35vdk51lib-LeKW8iw_splqhZW-";
-
 const supabase = createClient(supabaseUrl, supabaseKey, {
   auth: {
     persistSession: false,
@@ -18,14 +39,18 @@ const supabase = createClient(supabaseUrl, supabaseKey, {
   },
 });
 
+console.log("✅ Server geconfigureerd met environment variabelen");
+console.log("📍 Restaurant ID:", RESTAURANT_ID);
+console.log("🔗 Supabase URL:", supabaseUrl);
+
 // Helper functie om request body te parsen
 function parseRequestBody(req) {
   return new Promise((resolve, reject) => {
-    let body = '';
-    req.on('data', chunk => {
+    let body = "";
+    req.on("data", (chunk) => {
       body += chunk.toString();
     });
-    req.on('end', () => {
+    req.on("end", () => {
       try {
         resolve(JSON.parse(body));
       } catch (error) {
@@ -71,7 +96,8 @@ const server = http.createServer(async (req, res) => {
     res.end(
       JSON.stringify({
         status: "OK",
-        message: "RestoPlanner Health Check - MET SUPABASE DATABASE - JUISTE OPENINGSTIJDEN 08:30-16:00",
+        message:
+          "RestoPlanner Health Check - MET SUPABASE DATABASE - JUISTE OPENINGSTIJDEN 08:30-16:00",
         timestamp: new Date().toISOString(),
       })
     );
@@ -106,7 +132,10 @@ const server = http.createServer(async (req, res) => {
   // NIEUWE ENDPOINTS VOOR RESERVERINGEN BEHEREN
 
   // 1. POST /api/reservations/check-availability - Check beschikbaarheid
-  if (req.url === "/api/reservations/check-availability" && req.method === "POST") {
+  if (
+    req.url === "/api/reservations/check-availability" &&
+    req.method === "POST"
+  ) {
     handleCheckAvailability(req, res);
     return;
   }
@@ -265,10 +294,10 @@ async function handleCalendar(req, res) {
 
     // Haal eerst het eerste restaurant op uit de database
     const { data: restaurants, error: restaurantError } = await supabase
-      .from('restaurants')
-      .select('id')
+      .from("restaurants")
+      .select("id")
       .limit(1)
-      .order('created_at', { ascending: false });
+      .order("created_at", { ascending: false });
 
     if (restaurantError || !restaurants || restaurants.length === 0) {
       console.error("Geen restaurants gevonden:", restaurantError);
@@ -346,7 +375,8 @@ async function handleCheckAvailability(req, res) {
       res.end(
         JSON.stringify({
           success: false,
-          error: "restaurant_id, requested_date, requested_time en party_size zijn verplicht",
+          error:
+            "restaurant_id, requested_date, requested_time en party_size zijn verplicht",
         })
       );
       return;
@@ -357,28 +387,35 @@ async function handleCheckAvailability(req, res) {
 
     // 1. Haal restaurant instellingen op uit database
     let restaurant = null;
-    
+
     try {
       const { data: restaurantData, error: restaurantError } = await supabase
-        .from('restaurants')
-        .select('id, name, opening_hours, settings')
-        .eq('id', restaurantId)
+        .from("restaurants")
+        .select("id, name, opening_hours, settings")
+        .eq("id", restaurantId)
         .single();
 
       if (restaurantError) {
-        console.error("Supabase error bij ophalen restaurant:", restaurantError);
+        console.error(
+          "Supabase error bij ophalen restaurant:",
+          restaurantError
+        );
         res.writeHead(500, { "Content-Type": "application/json" });
         res.end(
           JSON.stringify({
             success: false,
             error: "Restaurant niet gevonden in database",
-            details: "Het opgegeven restaurant bestaat niet of is niet toegankelijk.",
+            details:
+              "Het opgegeven restaurant bestaat niet of is niet toegankelijk.",
           })
         );
         return;
       } else {
         restaurant = restaurantData;
-        console.log("✅ Restaurant instellingen opgehaald uit database:", restaurant.name);
+        console.log(
+          "✅ Restaurant instellingen opgehaald uit database:",
+          restaurant.name
+        );
       }
     } catch (error) {
       console.error("Error bij ophalen restaurant:", error);
@@ -387,7 +424,8 @@ async function handleCheckAvailability(req, res) {
         JSON.stringify({
           success: false,
           error: "Database fout",
-          details: "Er is een fout opgetreden bij het ophalen van restaurant gegevens.",
+          details:
+            "Er is een fout opgetreden bij het ophalen van restaurant gegevens.",
         })
       );
       return;
@@ -395,7 +433,9 @@ async function handleCheckAvailability(req, res) {
 
     // 2. Check openingstijden
     const requestedDate = new Date(requested_date);
-    const dayOfWeek = requestedDate.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+    const dayOfWeek = requestedDate
+      .toLocaleDateString("en-US", { weekday: "long" })
+      .toLowerCase();
     const openingHours = restaurant.opening_hours || {};
     const dayHours = openingHours[dayOfWeek];
 
@@ -451,13 +491,13 @@ async function handleCheckAvailability(req, res) {
     // 4. Haal totale restaurant capaciteit op
     let tables = [];
     let totalCapacity = 0;
-    
+
     try {
       const { data: restaurantTables, error: tablesError } = await supabase
-        .from('restaurant_tables')
-        .select('id, table_number, capacity, status')
-        .eq('restaurant_id', restaurantId)
-        .eq('is_active', true);
+        .from("restaurant_tables")
+        .select("id, table_number, capacity, status")
+        .eq("restaurant_id", restaurantId)
+        .eq("is_active", true);
 
       if (tablesError) {
         console.error("Supabase error:", tablesError);
@@ -478,16 +518,18 @@ async function handleCheckAvailability(req, res) {
     // 5. Haal alle reserveringen op voor het gewenste tijdsslot (reserveringsduur overlap)
     const requestedTime = new Date(`2000-01-01T${requested_time}:00`);
     const timeSlotStart = new Date(requestedTime.getTime() - 15 * 60 * 1000); // 15 min voor
-    const timeSlotEnd = new Date(requestedTime.getTime() + reservationDuration * 60 * 1000); // reserveringsduur na
-    
+    const timeSlotEnd = new Date(
+      requestedTime.getTime() + reservationDuration * 60 * 1000
+    ); // reserveringsduur na
+
     let overlappingReservations = [];
     try {
       const { data: reservations, error } = await supabase
-        .from('reservations')
-        .select('id, customer_name, reservation_time, party_size')
-        .eq('restaurant_id', restaurantId)
-        .eq('reservation_date', requested_date)
-        .not('status', 'eq', 'cancelled');
+        .from("reservations")
+        .select("id, customer_name, reservation_time, party_size")
+        .eq("restaurant_id", restaurantId)
+        .eq("reservation_date", requested_date)
+        .not("status", "eq", "cancelled");
 
       if (error) {
         console.error("Supabase error:", error);
@@ -502,15 +544,24 @@ async function handleCheckAvailability(req, res) {
     }
 
     // 3. Filter reserveringen die overlappen met het gewenste tijdsslot
-    const conflictingReservations = overlappingReservations.filter(reservation => {
-      const reservationTime = new Date(`2000-01-01T${reservation.reservation_time}:00`);
-      return reservationTime >= timeSlotStart && reservationTime <= timeSlotEnd;
-    });
+    const conflictingReservations = overlappingReservations.filter(
+      (reservation) => {
+        const reservationTime = new Date(
+          `2000-01-01T${reservation.reservation_time}:00`
+        );
+        return (
+          reservationTime >= timeSlotStart && reservationTime <= timeSlotEnd
+        );
+      }
+    );
 
     // 6. Bereken totale bezette capaciteit in het tijdsslot
-    const occupiedCapacity = conflictingReservations.reduce((sum, res) => sum + res.party_size, 0);
+    const occupiedCapacity = conflictingReservations.reduce(
+      (sum, res) => sum + res.party_size,
+      0
+    );
     const availableCapacity = totalCapacity - occupiedCapacity;
-    
+
     // Check max reserveringen per slot
     if (conflictingReservations.length >= maxReservationsPerSlot) {
       res.writeHead(400, { "Content-Type": "application/json" });
@@ -524,7 +575,7 @@ async function handleCheckAvailability(req, res) {
       );
       return;
     }
-    
+
     const isAvailable = availableCapacity >= party_size;
 
     const alternativeTimes = generateAlternativeTimes(requested_time, dayHours);
@@ -557,15 +608,19 @@ async function handleCheckAvailability(req, res) {
           large_group_threshold: largeGroupThreshold,
         },
         is_large_group: isLargeGroup,
-        large_group_warning: isLargeGroup ? "Voor groepen van meer dan 6 personen sturen wij uw aanvraag door naar het restaurant. U ontvangt binnen 24 uur een bevestiging." : null,
+        large_group_warning: isLargeGroup
+          ? "Voor groepen van meer dan 6 personen sturen wij uw aanvraag door naar het restaurant. U ontvangt binnen 24 uur een bevestiging."
+          : null,
         total_restaurant_capacity: totalCapacity,
         occupied_capacity: occupiedCapacity,
         available_capacity: availableCapacity,
         conflicting_reservations: conflictingReservations,
         alternative_times: alternativeTimes,
         unavailability_reason: unavailabilityReason,
-        message: isAvailable 
-          ? `Tijdstip ${requested_time} is beschikbaar voor ${party_size} personen (${availableCapacity}/${totalCapacity} capaciteit vrij)${isLargeGroup ? ' - Handmatige goedkeuring vereist' : ''}`
+        message: isAvailable
+          ? `Tijdstip ${requested_time} is beschikbaar voor ${party_size} personen (${availableCapacity}/${totalCapacity} capaciteit vrij)${
+              isLargeGroup ? " - Handmatige goedkeuring vereist" : ""
+            }`
           : `Tijdstip ${requested_time} is niet beschikbaar voor ${party_size} personen: ${unavailabilityReason}`,
       })
     );
@@ -586,23 +641,30 @@ async function handleCheckAvailability(req, res) {
 async function handleBookReservation(req, res) {
   try {
     const body = await parseRequestBody(req);
-    const { 
-      restaurant_id, 
-      reservation_date, 
-      reservation_time, 
-      customer_name, 
-      customer_email, 
-      customer_phone, 
-      party_size, 
-      notes 
+    const {
+      restaurant_id,
+      reservation_date,
+      reservation_time,
+      customer_name,
+      customer_email,
+      customer_phone,
+      party_size,
+      notes,
     } = body;
 
-    if (!restaurant_id || !reservation_date || !reservation_time || !customer_name || !party_size) {
+    if (
+      !restaurant_id ||
+      !reservation_date ||
+      !reservation_time ||
+      !customer_name ||
+      !party_size
+    ) {
       res.writeHead(400, { "Content-Type": "application/json" });
       res.end(
         JSON.stringify({
           success: false,
-          error: "restaurant_id, reservation_date, reservation_time, customer_name en party_size zijn verplicht",
+          error:
+            "restaurant_id, reservation_date, reservation_time, customer_name en party_size zijn verplicht",
         })
       );
       return;
@@ -613,28 +675,35 @@ async function handleBookReservation(req, res) {
 
     // 1. Haal restaurant instellingen op uit database
     let restaurant = null;
-    
+
     try {
       const { data: restaurantData, error: restaurantError } = await supabase
-        .from('restaurants')
-        .select('id, name, opening_hours, settings')
-        .eq('id', restaurantId)
+        .from("restaurants")
+        .select("id, name, opening_hours, settings")
+        .eq("id", restaurantId)
         .single();
 
       if (restaurantError) {
-        console.error("Supabase error bij ophalen restaurant:", restaurantError);
+        console.error(
+          "Supabase error bij ophalen restaurant:",
+          restaurantError
+        );
         res.writeHead(500, { "Content-Type": "application/json" });
         res.end(
           JSON.stringify({
             success: false,
             error: "Restaurant niet gevonden in database",
-            details: "Het opgegeven restaurant bestaat niet of is niet toegankelijk.",
+            details:
+              "Het opgegeven restaurant bestaat niet of is niet toegankelijk.",
           })
         );
         return;
       } else {
         restaurant = restaurantData;
-        console.log("✅ Restaurant instellingen opgehaald uit database:", restaurant.name);
+        console.log(
+          "✅ Restaurant instellingen opgehaald uit database:",
+          restaurant.name
+        );
       }
     } catch (error) {
       console.error("Error bij ophalen restaurant:", error);
@@ -643,7 +712,8 @@ async function handleBookReservation(req, res) {
         JSON.stringify({
           success: false,
           error: "Database fout",
-          details: "Er is een fout opgetreden bij het ophalen van restaurant gegevens.",
+          details:
+            "Er is een fout opgetreden bij het ophalen van restaurant gegevens.",
         })
       );
       return;
@@ -651,7 +721,9 @@ async function handleBookReservation(req, res) {
 
     // 2. Check openingstijden
     const requestedDate = new Date(reservation_date);
-    const dayOfWeek = requestedDate.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+    const dayOfWeek = requestedDate
+      .toLocaleDateString("en-US", { weekday: "long" })
+      .toLowerCase();
     const openingHours = restaurant.opening_hours || {};
     const dayHours = openingHours[dayOfWeek];
 
@@ -707,13 +779,13 @@ async function handleBookReservation(req, res) {
     // 4. Haal totale restaurant capaciteit op
     let tables = [];
     let totalCapacity = 0;
-    
+
     try {
       const { data: restaurantTables, error: tablesError } = await supabase
-        .from('restaurant_tables')
-        .select('id, table_number, capacity, status')
-        .eq('restaurant_id', restaurantId)
-        .eq('is_active', true);
+        .from("restaurant_tables")
+        .select("id, table_number, capacity, status")
+        .eq("restaurant_id", restaurantId)
+        .eq("is_active", true);
 
       if (tablesError) {
         console.error("Supabase error:", tablesError);
@@ -733,26 +805,34 @@ async function handleBookReservation(req, res) {
 
     // 5. Check overlappende reserveringen
     let overlappingReservations = [];
-    
+
     try {
-      const { data: existingReservations, error: reservationsError } = await supabase
-        .from('reservations')
-        .select('id, customer_name, reservation_time, party_size, status')
-        .eq('restaurant_id', restaurantId)
-        .eq('reservation_date', reservation_date)
-        .not('status', 'eq', 'cancelled');
+      const { data: existingReservations, error: reservationsError } =
+        await supabase
+          .from("reservations")
+          .select("id, customer_name, reservation_time, party_size, status")
+          .eq("restaurant_id", restaurantId)
+          .eq("reservation_date", reservation_date)
+          .not("status", "eq", "cancelled");
 
       if (reservationsError) {
-        console.error("Supabase error bij ophalen reserveringen:", reservationsError);
+        console.error(
+          "Supabase error bij ophalen reserveringen:",
+          reservationsError
+        );
       } else {
         // Filter reserveringen die overlappen met het gewenste tijdstip
-        overlappingReservations = existingReservations.filter(reservation => {
-          const reservationTime = new Date(`2000-01-01T${reservation.reservation_time}:00`);
+        overlappingReservations = existingReservations.filter((reservation) => {
+          const reservationTime = new Date(
+            `2000-01-01T${reservation.reservation_time}:00`
+          );
           const requestedTime = new Date(`2000-01-01T${reservation_time}:00`);
-          
+
           // Check overlap binnen reserveringsduur
-          const timeDiff = Math.abs(reservationTime.getTime() - requestedTime.getTime());
-          return timeDiff < (reservationDuration * 60 * 1000); // Binnen reserveringsduur
+          const timeDiff = Math.abs(
+            reservationTime.getTime() - requestedTime.getTime()
+          );
+          return timeDiff < reservationDuration * 60 * 1000; // Binnen reserveringsduur
         });
       }
     } catch (error) {
@@ -760,13 +840,19 @@ async function handleBookReservation(req, res) {
     }
 
     // 6. Bereken beschikbare capaciteit
-    const occupiedCapacity = overlappingReservations.reduce((sum, res) => sum + res.party_size, 0);
+    const occupiedCapacity = overlappingReservations.reduce(
+      (sum, res) => sum + res.party_size,
+      0
+    );
     const availableCapacity = totalCapacity - occupiedCapacity;
 
     // 7. Check of er voldoende capaciteit is
     if (availableCapacity < party_size) {
-      const alternativeTimes = generateAlternativeTimes(reservation_time, dayHours);
-      
+      const alternativeTimes = generateAlternativeTimes(
+        reservation_time,
+        dayHours
+      );
+
       res.writeHead(400, { "Content-Type": "application/json" });
       res.end(
         JSON.stringify({
@@ -778,7 +864,7 @@ async function handleBookReservation(req, res) {
           available_capacity: availableCapacity,
           conflicting_reservations: overlappingReservations,
           alternative_times: alternativeTimes,
-          unavailability_reason: "capaciteit_overschreden"
+          unavailability_reason: "capaciteit_overschreden",
         })
       );
       return;
@@ -786,8 +872,11 @@ async function handleBookReservation(req, res) {
 
     // 8. Check max reserveringen per slot
     if (overlappingReservations.length >= maxReservationsPerSlot) {
-      const alternativeTimes = generateAlternativeTimes(reservation_time, dayHours);
-      
+      const alternativeTimes = generateAlternativeTimes(
+        reservation_time,
+        dayHours
+      );
+
       res.writeHead(400, { "Content-Type": "application/json" });
       res.end(
         JSON.stringify({
@@ -799,7 +888,7 @@ async function handleBookReservation(req, res) {
           available_capacity: availableCapacity,
           conflicting_reservations: overlappingReservations,
           alternative_times: alternativeTimes,
-          unavailability_reason: "max_reservations_per_slot"
+          unavailability_reason: "max_reservations_per_slot",
         })
       );
       return;
@@ -808,7 +897,7 @@ async function handleBookReservation(req, res) {
 
     // 4. Maak de reservering aan
     const { data: newReservation, error } = await supabase
-      .from('reservations')
+      .from("reservations")
       .insert({
         restaurant_id: restaurantId,
         reservation_date,
@@ -818,7 +907,7 @@ async function handleBookReservation(req, res) {
         customer_phone: customer_phone || "",
         party_size,
         special_requests: notes || "",
-        status: reservationStatus
+        status: reservationStatus,
       })
       .select()
       .single();
@@ -843,8 +932,10 @@ async function handleBookReservation(req, res) {
         booked: true,
         reservation: newReservation,
         is_large_group: isLargeGroup,
-        large_group_warning: isLargeGroup ? "Voor groepen van meer dan 6 personen sturen wij uw aanvraag door naar het restaurant. U ontvangt binnen 24 uur een bevestiging." : null,
-        message: isLargeGroup 
+        large_group_warning: isLargeGroup
+          ? "Voor groepen van meer dan 6 personen sturen wij uw aanvraag door naar het restaurant. U ontvangt binnen 24 uur een bevestiging."
+          : null,
+        message: isLargeGroup
           ? `Reservering voor ${customer_name} is aangemaakt en wacht op handmatige goedkeuring (24 uur)`
           : `Reservering succesvol aangemaakt voor ${customer_name} (echte database)`,
       })
@@ -866,16 +957,16 @@ async function handleBookReservation(req, res) {
 async function handleUpdateReservation(req, res) {
   try {
     const body = await parseRequestBody(req);
-    const { 
-      reservation_id, 
-      reservation_date, 
-      reservation_time, 
-      customer_name, 
-      customer_email, 
-      customer_phone, 
-      party_size, 
+    const {
+      reservation_id,
+      reservation_date,
+      reservation_time,
+      customer_name,
+      customer_email,
+      customer_phone,
+      party_size,
       notes,
-      status 
+      status,
     } = body;
 
     if (!reservation_id) {
@@ -900,7 +991,7 @@ async function handleUpdateReservation(req, res) {
       customer_phone: customer_phone || "",
       party_size: party_size || 4,
       notes: notes || "",
-      status: status || "confirmed"
+      status: status || "confirmed",
     };
 
     res.writeHead(200, { "Content-Type": "application/json" });
@@ -972,7 +1063,7 @@ function generateFreeBusyPeriods(reservations) {
   const periods = [];
   const startTime = "17:00";
   const endTime = "22:00";
-  
+
   // Voor nu: eenvoudige demo periods
   // Later: echte logica gebaseerd op reserveringen
   periods.push({
@@ -1002,8 +1093,8 @@ function generateFreeBusyPeriods(reservations) {
 // Helper functie om reserveringen per datum te groeperen
 function groupReservationsByDate(reservations) {
   const grouped = {};
-  
-  reservations.forEach(reservation => {
+
+  reservations.forEach((reservation) => {
     const date = reservation.reservation_date;
     if (!grouped[date]) {
       grouped[date] = {
@@ -1013,7 +1104,7 @@ function groupReservationsByDate(reservations) {
         total_party_size: 0,
       };
     }
-    
+
     grouped[date].reservations.push(reservation);
     grouped[date].total_reservations++;
     grouped[date].total_party_size += reservation.party_size || 0;
@@ -1026,19 +1117,19 @@ function groupReservationsByDate(reservations) {
 function generateAlternativeTimes(requestedTime, dayHours) {
   const baseTime = new Date(`2000-01-01T${requestedTime}:00`);
   const alternatives = [];
-  
+
   // Genereer tijden 30 minuten voor en na het gewenste tijdstip
   for (let i = -2; i <= 2; i++) {
     if (i === 0) continue; // Skip het gewenste tijdstip
     const alternativeTime = new Date(baseTime.getTime() + i * 30 * 60 * 1000);
     const timeString = alternativeTime.toTimeString().slice(0, 5);
-    
+
     // Check of alternatief tijdstip binnen openingstijden valt
     if (timeString >= dayHours.open && timeString <= dayHours.close) {
       alternatives.push(timeString);
     }
   }
-  
+
   return alternatives;
 }
 
@@ -1050,10 +1141,10 @@ async function handleGetRestaurantCapacity(req, res) {
 
     // Haal alle tafels op van het restaurant
     const { data: tables, error: tablesError } = await supabase
-      .from('restaurant_tables')
-      .select('id, table_number, capacity, status')
-      .eq('restaurant_id', restaurantId)
-      .eq('is_active', true);
+      .from("restaurant_tables")
+      .select("id, table_number, capacity, status")
+      .eq("restaurant_id", restaurantId)
+      .eq("is_active", true);
 
     if (tablesError) {
       console.error("Supabase error:", tablesError);
@@ -1069,8 +1160,13 @@ async function handleGetRestaurantCapacity(req, res) {
     }
 
     // Bereken totale capaciteit
-    const totalCapacity = tables.reduce((sum, table) => sum + table.capacity, 0);
-    const availableTables = tables.filter(table => table.status === 'available').length;
+    const totalCapacity = tables.reduce(
+      (sum, table) => sum + table.capacity,
+      0
+    );
+    const availableTables = tables.filter(
+      (table) => table.status === "available"
+    ).length;
     const totalTables = tables.length;
 
     res.writeHead(200, { "Content-Type": "application/json" });
@@ -1108,10 +1204,16 @@ server.listen(PORT, () => {
   console.log(`🗄️ Supabase database verbonden: ${supabaseUrl}`);
   console.log(`✅ Echte data beschikbaar via API endpoints!`);
   console.log(`📋 Nieuwe endpoints toegevoegd:`);
-  console.log(`   - POST /api/reservations/check-availability (MET CAPACITEITSCONTROLE + GROTE GROEPEN)`);
-  console.log(`   - POST /api/reservations/book (MET CAPACITEITSCONTROLE + GROTE GROEPEN)`);
+  console.log(
+    `   - POST /api/reservations/check-availability (MET CAPACITEITSCONTROLE + GROTE GROEPEN)`
+  );
+  console.log(
+    `   - POST /api/reservations/book (MET CAPACITEITSCONTROLE + GROTE GROEPEN)`
+  );
   console.log(`   - PUT /api/reservations/update`);
   console.log(`   - DELETE /api/reservations/delete`);
   console.log(`   - GET /api/restaurant/capacity`);
-  console.log(`🎯 Grote groepen (>6 personen) → Handmatige goedkeuring vereist`);
+  console.log(
+    `🎯 Grote groepen (>6 personen) → Handmatige goedkeuring vereist`
+  );
 });

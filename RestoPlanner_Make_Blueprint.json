@@ -18,7 +18,7 @@
               "Accept": "application/json"
             },
             "body": {
-              "restaurant_id": "123",
+              "restaurant_id": "{{YOUR_RESTAURANT_ID}}",
               "requested_date": "2024-01-15",
               "requested_time": "19:00",
               "party_size": 4
@@ -43,7 +43,7 @@
               "Accept": "application/json"
             },
             "body": {
-              "restaurant_id": "123",
+              "restaurant_id": "{{YOUR_RESTAURANT_ID}}",
               "reservation_date": "2024-01-15",
               "reservation_time": "19:00",
               "customer_name": "Jan Janssens",
@@ -72,7 +72,7 @@
               "Accept": "application/json"
             },
             "body": {
-              "reservation_id": "uuid-123",
+              "reservation_id": "{{RESERVATION_ID}}",
               "reservation_date": "2024-01-16",
               "reservation_time": "20:00",
               "customer_name": "Jan Janssens",
@@ -99,7 +99,7 @@
               "Accept": "application/json"
             },
             "body": {
-              "reservation_id": "uuid-123"
+              "reservation_id": "{{RESERVATION_ID}}"
             },
             "timeout": 15000
           }
@@ -117,11 +117,11 @@
         "required_fields": [
           "restaurant_id",
           "requested_date",
-          "requested_time", 
+          "requested_time",
           "party_size"
         ],
         "example_request": {
-          "restaurant_id": "123",
+          "restaurant_id": "{{YOUR_RESTAURANT_ID}}",
           "requested_date": "2024-01-15",
           "requested_time": "19:00",
           "party_size": 4
@@ -157,7 +157,7 @@
           "party_size"
         ],
         "example_request": {
-          "restaurant_id": "123",
+          "restaurant_id": "{{YOUR_RESTAURANT_ID}}",
           "reservation_date": "2024-01-15",
           "reservation_time": "19:00",
           "customer_name": "Jan Janssens",
@@ -170,8 +170,8 @@
           "success": true,
           "booked": true,
           "reservation": {
-            "id": "uuid-123",
-            "restaurant_id": "123",
+            "id": "{{RESERVATION_ID}}",
+            "restaurant_id": "{{YOUR_RESTAURANT_ID}}",
             "reservation_date": "2024-01-15",
             "reservation_time": "19:00",
             "customer_name": "Jan Janssens",
@@ -190,9 +190,7 @@
         "url": "https://innovationstudio.be/api/reservations/update",
         "method": "PUT",
         "description": "Update een bestaande reservering",
-        "required_fields": [
-          "reservation_id"
-        ],
+        "required_fields": ["reservation_id"],
         "example_request": {
           "reservation_id": "uuid-123",
           "reservation_date": "2024-01-16",
@@ -220,9 +218,7 @@
         "url": "https://innovationstudio.be/api/reservations/delete",
         "method": "DELETE",
         "description": "Annuleer een reservering",
-        "required_fields": [
-          "reservation_id"
-        ],
+        "required_fields": ["reservation_id"],
         "example_request": {
           "reservation_id": "uuid-123"
         },

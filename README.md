@@ -24,7 +24,8 @@ Een moderne web-applicatie voor restaurant management, gebouwd met React, TypeSc
 ## 📦 Installatie
 
 ### Vereisten
-- Node.js 18+ 
+
+- Node.js 18+
 - npm of bun
 
 ### Lokale ontwikkeling
@@ -40,9 +41,10 @@ cd dine-wise
 npm install
 
 # 4. Kopieer environment variabelen
-cp env.example .env.local
+cp env.example .env
 
-# 5. Configureer je Supabase credentials in .env.local
+# 5. Configureer je environment variabelen
+# Zie ENVIRONMENT_SETUP.md voor gedetailleerde instructies
 
 # 6. Start de development server
 npm run dev
@@ -63,15 +65,18 @@ npm run clean:modules # Verwijder node_modules en installeer opnieuw
 ## 🌐 Deployment
 
 ### Vercel (Aanbevolen)
+
 ```bash
 npm run build
 # Deploy naar Vercel via GitHub integratie
 ```
 
 ### Combell
+
 Zie `COMBELL_DEPLOYMENT.md` voor gedetailleerde instructies.
 
 ### VPS
+
 Zie `VPS_DEPLOYMENT.md` voor server setup instructies.
 
 ## 📁 Project Structuur

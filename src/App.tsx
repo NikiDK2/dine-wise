@@ -17,6 +17,7 @@ import Reviews from "./pages/Reviews";
 import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
 import Agenda from "./pages/Agenda";
+import CreateRestaurant from "./pages/CreateRestaurant";
 
 const queryClient = new QueryClient();
 
@@ -40,6 +41,7 @@ const App = () => (
               <Route path="/reports" element={<Reports />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/agenda" element={<Agenda />} />
+              <Route path="/create-restaurant" element={<CreateRestaurant />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>

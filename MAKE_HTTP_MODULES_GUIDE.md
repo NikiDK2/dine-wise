@@ -3,11 +3,13 @@
 ## 📋 **Stap-voor-Stap: HTTP Modules Maken in Make.com**
 
 ### **Stap 1: Maak een nieuw scenario**
+
 1. Ga naar Make.com
 2. Klik "Create a new scenario"
 3. Geef je scenario een naam (bijv. "Check Beschikbaarheid")
 
 ### **Stap 2: Voeg HTTP module toe**
+
 1. Klik op de "+" knop
 2. Zoek naar "HTTP"
 3. Selecteer "HTTP" module
@@ -16,6 +18,7 @@
 ### **Stap 3: Configureer HTTP module**
 
 #### **Voor Check Beschikbaarheid:**
+
 ```
 URL: https://innovationstudio.be/api/reservations/check-availability
 Method: POST
@@ -24,7 +27,7 @@ Headers:
   Accept: application/json
 Body (JSON):
 {
-  "restaurant_id": "123",
+  "restaurant_id": "{{YOUR_RESTAURANT_ID}}",
   "requested_date": "2024-01-15",
   "requested_time": "19:00",
   "party_size": 4
@@ -32,6 +35,7 @@ Body (JSON):
 ```
 
 #### **Voor Boek Reservering:**
+
 ```
 URL: https://innovationstudio.be/api/reservations/book
 Method: POST
@@ -40,7 +44,7 @@ Headers:
   Accept: application/json
 Body (JSON):
 {
-  "restaurant_id": "123",
+  "restaurant_id": "{{YOUR_RESTAURANT_ID}}",
   "reservation_date": "2024-01-15",
   "reservation_time": "19:00",
   "customer_name": "Jan Janssens",
@@ -52,6 +56,7 @@ Body (JSON):
 ```
 
 #### **Voor Update Reservering:**
+
 ```
 URL: https://innovationstudio.be/api/reservations/update
 Method: PUT
@@ -70,6 +75,7 @@ Body (JSON):
 ```
 
 #### **Voor Verwijder Reservering:**
+
 ```
 URL: https://innovationstudio.be/api/reservations/delete
 Method: DELETE
@@ -83,11 +89,13 @@ Body (JSON):
 ```
 
 ### **Stap 4: Test de module**
+
 1. Klik op "Run once" om te testen
 2. Controleer de response
 3. Zorg dat je geen fouten krijgt
 
 ### **Stap 5: Configureer dynamische waarden**
+
 Gebruik Make.com formules voor dynamische waarden:
 
 ```javascript
@@ -107,21 +115,25 @@ Gebruik Make.com formules voor dynamische waarden:
 ## 🎯 **4 Scenario's die je moet maken:**
 
 ### **Scenario 1: Check Beschikbaarheid**
+
 - **Trigger:** Webhook of Manual
 - **Action:** HTTP Request naar check-availability
 - **Output:** Email/SMS met resultaat
 
 ### **Scenario 2: Boek Reservering**
+
 - **Trigger:** Webhook of Manual
 - **Action:** HTTP Request naar book
 - **Output:** Email bevestiging naar klant
 
 ### **Scenario 3: Update Reservering**
+
 - **Trigger:** Email/SMS van klant
 - **Action:** HTTP Request naar update
 - **Output:** Email bevestiging van wijziging
 
 ### **Scenario 4: Verwijder Reservering**
+
 - **Trigger:** Email/SMS van klant
 - **Action:** HTTP Request naar delete
 - **Output:** Email bevestiging van annulering
@@ -129,11 +141,13 @@ Gebruik Make.com formules voor dynamische waarden:
 ## 🔧 **HTTP Module Configuratie Details**
 
 ### **Algemene instellingen:**
+
 - **Timeout:** 15000 ms (15 seconden)
 - **Retry:** 3 pogingen
 - **Retry delay:** 30 seconden
 
 ### **Headers (altijd hetzelfde):**
+
 ```json
 {
   "Content-Type": "application/json",
@@ -142,6 +156,7 @@ Gebruik Make.com formules voor dynamische waarden:
 ```
 
 ### **Error Handling:**
+
 ```javascript
 // In Make.com router
 {{if(1.success = true; "OK"; "ERROR")}}
@@ -153,6 +168,7 @@ Gebruik Make.com formules voor dynamische waarden:
 ## 📊 **Response Mapping**
 
 ### **Check Beschikbaarheid Response:**
+
 ```javascript
 // Beschikbaarheid
 {{1.available}}
@@ -165,6 +181,7 @@ Gebruik Make.com formules voor dynamische waarden:
 ```
 
 ### **Boek Reservering Response:**
+
 ```javascript
 // Reservering ID
 {{1.reservation.id}}
@@ -178,6 +195,7 @@ Gebruik Make.com formules voor dynamische waarden:
 ```
 
 ### **Update/Delete Response:**
+
 ```javascript
 // Succes status
 {{1.updated}}
@@ -190,18 +208,22 @@ Gebruik Make.com formules voor dynamische waarden:
 ## 🚨 **Veelvoorkomende Fouten**
 
 ### **400 Bad Request:**
+
 - Controleer of alle verplichte velden zijn ingevuld
 - Controleer JSON syntax
 
 ### **404 Not Found:**
+
 - Controleer of reservation_id correct is
 - Controleer of URL correct is
 
 ### **409 Conflict:**
+
 - Tijdstip is niet beschikbaar
 - Gebruik alternative_times uit response
 
 ### **500 Internal Server Error:**
+
 - Database fout
 - Controleer server logs
 
@@ -219,9 +241,10 @@ Gebruik Make.com formules voor dynamische waarden:
 ## 🎉 **Resultaat**
 
 Na deze stappen heb je 4 werkende HTTP modules in Make.com die kunnen:
+
 - ✅ Beschikbaarheid controleren
 - ✅ Reserveringen aanmaken
 - ✅ Reserveringen aanpassen
 - ✅ Reserveringen annuleren
 
-**Je kunt nu automatische workflows maken voor je restaurant!** 🚀 
+**Je kunt nu automatische workflows maken voor je restaurant!** 🚀

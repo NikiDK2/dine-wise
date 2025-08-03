@@ -12,6 +12,7 @@ import {
   MessageSquare,
   FileText,
   CalendarDays,
+  Plus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -62,6 +63,21 @@ export function Sidebar() {
     >
       {/* Navigation */}
       <nav className="flex-1 px-4 py-6 space-y-2">
+        {/* New Restaurant Button */}
+        <Button
+          variant="outline"
+          className={cn(
+            "w-full justify-start gap-3 transition-all duration-200",
+            collapsed && "px-2"
+          )}
+          onClick={() => navigate("/create-restaurant")}
+        >
+          <Plus className="h-5 w-5 flex-shrink-0" />
+          {!collapsed && (
+            <span className="flex-1 text-left">Nieuw Restaurant</span>
+          )}
+        </Button>
+
         <div className="space-y-1">
           {navigation.map((item) => {
             const isCurrent = isCurrentPath(item.href);
