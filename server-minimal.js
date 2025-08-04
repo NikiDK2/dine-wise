@@ -217,8 +217,8 @@ async function handleFreeBusy(req, res) {
       return;
     }
 
-    // Gebruik vaste restaurant ID
-    const restaurantId = RESTAURANT_ID;
+    // Gebruik restaurant ID uit request body
+    const restaurantId = restaurant_id;
 
     // Haal reserveringen op van Supabase
     const { data: reservations, error } = await supabase
@@ -377,8 +377,8 @@ async function handleCheckAvailability(req, res) {
       return;
     }
 
-    // Gebruik vaste restaurant ID
-    const restaurantId = RESTAURANT_ID;
+    // Gebruik restaurant ID uit request body
+    const restaurantId = restaurant_id;
 
     // 1. Haal restaurant instellingen op uit database
     let restaurant = null;
@@ -665,8 +665,8 @@ async function handleBookReservation(req, res) {
       return;
     }
 
-    // Gebruik vaste restaurant ID
-    const restaurantId = RESTAURANT_ID;
+    // Gebruik restaurant ID uit request body
+    const restaurantId = restaurant_id;
 
     // 1. Haal restaurant instellingen op uit database
     let restaurant = null;
@@ -1131,8 +1131,9 @@ function generateAlternativeTimes(requestedTime, dayHours) {
 // Check restaurant capaciteit
 async function handleGetRestaurantCapacity(req, res) {
   try {
-    // Gebruik vaste restaurant ID
-    const restaurantId = RESTAURANT_ID;
+    // Haal restaurant ID uit query parameters
+    const url = new URL(req.url, `http://${req.headers.host}`);
+    const restaurantId = url.searchParams.get('restaurant_id') || RESTAURANT_ID;
 
     // Haal alle tafels op van het restaurant
     const { data: tables, error: tablesError } = await supabase
