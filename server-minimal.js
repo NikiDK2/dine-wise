@@ -1162,6 +1162,7 @@ async function handleBookReservation(req, res) {
       );
       return;
     }
+    const isLargeGroup = party_size > largeGroupThreshold;
     const reservationStatus = isLargeGroup ? "pending" : "confirmed";
 
     // 4. Maak de reservering aan
