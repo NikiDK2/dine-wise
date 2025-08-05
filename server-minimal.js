@@ -263,7 +263,7 @@ async function handleFreeBusy(req, res) {
         time: time || null,
         free_busy_periods: freeBusyPeriods,
         total_reservations: reservations?.length || 0,
-        message: time 
+        message: time
           ? `Free/Busy informatie voor ${date} om ${time} (echte data van Supabase)`
           : `Free/Busy informatie voor ${date} (echte data van Supabase)`,
       })
@@ -1357,29 +1357,33 @@ function generateFreeBusyPeriods(reservations, requestedTime = null) {
   // Als er een specifieke tijd is opgevraagd, toon alleen die shift met 30-minuten sloten
   if (requestedTime) {
     // Bepaal in welke periode de opgevraagde tijd valt
-    const targetPeriod = timePeriods.find(period => 
-      requestedTime >= period.start && requestedTime < period.end
+    const targetPeriod = timePeriods.find(
+      (period) => requestedTime >= period.start && requestedTime < period.end
     );
 
     if (targetPeriod) {
       const periodReservations = reservationsByPeriod[targetPeriod.name] || [];
-      
+
       // Genereer 30-minuten sloten binnen de target periode
       const timeSlots = [];
       const startTime = new Date(`2000-01-01T${targetPeriod.start}:00`);
       const endTime = new Date(`2000-01-01T${targetPeriod.end}:00`);
-      
-      for (let time = new Date(startTime); time < endTime; time.setMinutes(time.getMinutes() + 30)) {
+
+      for (
+        let time = new Date(startTime);
+        time < endTime;
+        time.setMinutes(time.getMinutes() + 30)
+      ) {
         const timeString = time.toTimeString().slice(0, 5);
         timeSlots.push(timeString);
       }
 
       // Groepeer reserveringen per 30-minuten slot
       const reservationsBySlot = {};
-      periodReservations.forEach(reservation => {
+      periodReservations.forEach((reservation) => {
         const time = reservation.reservation_time;
         const timeStr = time.slice(0, 5);
-        
+
         // Bepaal in welk 30-minuten slot deze reservering valt
         const timeDate = new Date(`2000-01-01T${timeStr}:00`);
         const minutes = timeDate.getMinutes();
@@ -1387,14 +1391,17 @@ function generateFreeBusyPeriods(reservations, requestedTime = null) {
         const slotStartTime = new Date(timeDate);
         slotStartTime.setMinutes(slotStartMinutes);
         const slotKey = slotStartTime.toTimeString().slice(0, 5);
-        
+
         if (!reservationsBySlot[slotKey]) {
           reservationsBySlot[slotKey] = [];
         }
         reservationsBySlot[slotKey].push(reservation);
       });
 
-      // Genereer periods voor elk 30-minuten slot binnen de target periode
+            // Genereer periods voor elk 30-minuten slot binnen de target periode
+      let currentFreeStart = null;
+      let currentFreeEnd = null;
+      
       for (let i = 0; i < timeSlots.length - 1; i++) {
         const currentTime = timeSlots[i];
         const nextTime = timeSlots[i + 1];
@@ -1402,23 +1409,46 @@ function generateFreeBusyPeriods(reservations, requestedTime = null) {
         const slotReservations = reservationsBySlot[currentTime] || [];
         
         if (slotReservations.length > 0) {
+          // Als er reserveringen zijn, voeg eerst de huidige vrije periode toe (als die bestaat)
+          if (currentFreeStart !== null) {
+            periods.push({
+              type: "free",
+              start_time: currentFreeStart,
+              end_time: currentFreeEnd,
+              period_name: targetPeriod.name,
+              max_capacity: targetPeriod.maxCapacity,
+            });
+            currentFreeStart = null;
+            currentFreeEnd = null;
+          }
+          
+          // Voeg bezet tijdslot toe
           periods.push({
             type: "busy",
             start_time: currentTime,
             end_time: nextTime,
             reservations: slotReservations,
             period_name: targetPeriod.name,
-            max_capacity: targetPeriod.maxCapacity
+            max_capacity: targetPeriod.maxCapacity,
           });
         } else {
-          periods.push({
-            type: "free",
-            start_time: currentTime,
-            end_time: nextTime,
-            period_name: targetPeriod.name,
-            max_capacity: targetPeriod.maxCapacity
-          });
+          // Als er geen reserveringen zijn, start of verleng de vrije periode
+          if (currentFreeStart === null) {
+            currentFreeStart = currentTime;
+          }
+          currentFreeEnd = nextTime;
         }
+      }
+      
+      // Voeg de laatste vrije periode toe (als die bestaat)
+      if (currentFreeStart !== null) {
+        periods.push({
+          type: "free",
+          start_time: currentFreeStart,
+          end_time: currentFreeEnd,
+          period_name: targetPeriod.name,
+          max_capacity: targetPeriod.maxCapacity,
+        });
       }
     }
   } else {
