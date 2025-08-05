@@ -2202,12 +2202,7 @@ async function handleCreateCustomer(req, res) {
 async function handleVoiceCall(req, res) {
   try {
     const body = await parseRequestBody(req);
-    const {
-      customer_name,
-      customer_phone,
-      reservation_date,
-      reservation_time,
-    } = body;
+    const { customer_name, customer_phone } = body;
 
     // Validatie
     if (!customer_name || !customer_phone) {
@@ -2230,31 +2225,100 @@ async function handleVoiceCall(req, res) {
     // Haal voornaam op uit volledige naam
     const firstName = customer_name.split(" ")[0];
 
-    // ElevenLabs API call (simulatie voor nu)
-    console.log(
-      `📞 Simuleer voice call voor ${firstName} op ${customer_phone}`
-    );
+    // Controleer of ElevenLabs API key beschikbaar is
+    const elevenLabsApiKey = process.env.ELEVENLABS_API_KEY;
+    const elevenLabsAgentId = process.env.ELEVENLABS_AGENT_ID;
 
-    // Voor nu simuleren we de call, later vervangen door echte ElevenLabs API
-    const callResult = {
-      success: true,
-      call_id: `call_${Date.now()}`,
-      status: "initiated",
-      message: "Voice call getriggerd (simulatie)",
-    };
-
-    console.log(`✅ Voice call succesvol getriggerd voor ${firstName}`);
-
-    res.writeHead(200, { "Content-Type": "application/json" });
-    res.end(
-      JSON.stringify({
+    if (!elevenLabsApiKey || !elevenLabsAgentId) {
+      console.log("⚠️ ElevenLabs API key of Agent ID niet geconfigureerd");
+      
+      // Simuleer de call als ElevenLabs niet geconfigureerd is
+      const callResult = {
         success: true,
-        message: `Voice call getriggerd voor ${firstName}`,
-        customer_name: firstName,
-        customer_phone: customer_phone,
-        call_result: callResult,
-      })
-    );
+        call_id: `call_${Date.now()}`,
+        status: "simulated",
+        message: "Voice call getriggerd (simulatie - ElevenLabs niet geconfigureerd)",
+      };
+
+      console.log(`✅ Voice call gesimuleerd voor ${firstName}`);
+
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(
+        JSON.stringify({
+          success: true,
+          message: `Voice call getriggerd voor ${firstName} (simulatie)`,
+          customer_name: firstName,
+          customer_phone: customer_phone,
+          call_result: callResult,
+        })
+      );
+      return;
+    }
+
+    // Echte ElevenLabs API call
+    console.log(`📞 Initiëer echte ElevenLabs call voor ${firstName} op ${customer_phone}`);
+
+    try {
+      // ElevenLabs Voice Call API
+      const response = await fetch(`https://api.elevenlabs.io/v1/agents/${elevenLabsAgentId}/calls`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'xi-api-key': elevenLabsApiKey,
+        },
+        body: JSON.stringify({
+          phone_number: customer_phone,
+          customer_name: firstName,
+          // Voeg eventueel extra context toe
+          context: {
+            customer_name: firstName,
+            phone_number: customer_phone,
+            call_type: "outside_hours_notification"
+          }
+        })
+      });
+
+      const callResult = await response.json();
+
+      if (response.ok) {
+        console.log(`✅ ElevenLabs call succesvol getriggerd voor ${firstName}`);
+        console.log(`📞 Call ID: ${callResult.call_id || 'N/A'}`);
+
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(
+          JSON.stringify({
+            success: true,
+            message: `Voice call getriggerd voor ${firstName}`,
+            customer_name: firstName,
+            customer_phone: customer_phone,
+            call_result: callResult,
+          })
+        );
+      } else {
+        console.error(`❌ ElevenLabs API fout:`, callResult);
+        
+        res.writeHead(500, { "Content-Type": "application/json" });
+        res.end(
+          JSON.stringify({
+            success: false,
+            error: "ElevenLabs API fout",
+            details: callResult.detail || callResult.message || "Onbekende fout",
+            call_result: callResult,
+          })
+        );
+      }
+    } catch (apiError) {
+      console.error("❌ ElevenLabs API call fout:", apiError);
+      
+      res.writeHead(500, { "Content-Type": "application/json" });
+      res.end(
+        JSON.stringify({
+          success: false,
+          error: "ElevenLabs API call fout",
+          details: apiError.message,
+        })
+      );
+    }
   } catch (error) {
     console.error("❌ Server fout bij voice call:", error);
     res.writeHead(500, { "Content-Type": "application/json" });
