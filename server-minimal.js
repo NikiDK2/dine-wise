@@ -522,16 +522,23 @@ async function handleCheckAvailability(req, res) {
     const reservationDuration = settings.reservation_duration_minutes || 120; // 2 uur standaard
     const largeGroupThreshold = settings.large_group_threshold || 6; // Groepen > 6 personen
 
-    if (party_size < minPartySize || party_size > maxPartySize) {
+    // Check tijdspecifieke groepsgrootte limieten
+    const timeSpecificMaxPartySize = getTimeSpecificMaxPartySize(requestedTimeStr, settings);
+    const effectiveMaxPartySize = timeSpecificMaxPartySize || maxPartySize;
+
+    if (party_size < minPartySize || party_size > effectiveMaxPartySize) {
+      const timeSlot = getTimeSlot(requestedTimeStr);
       res.writeHead(400, { "Content-Type": "application/json" });
       res.end(
         JSON.stringify({
           success: false,
           error: "Ongeldige groepsgrootte",
-          details: `Groepsgrootte moet tussen ${minPartySize} en ${maxPartySize} personen zijn. U heeft ${party_size} personen opgegeven.`,
+          details: `Groepsgrootte moet tussen ${minPartySize} en ${effectiveMaxPartySize} personen zijn voor ${timeSlot}. U heeft ${party_size} personen opgegeven.`,
           requested_party_size: party_size,
           min_party_size: minPartySize,
-          max_party_size: maxPartySize,
+          max_party_size: effectiveMaxPartySize,
+          time_slot: timeSlot,
+          time_specific_limit: timeSpecificMaxPartySize ? true : false,
         })
       );
       return;
@@ -1225,6 +1232,41 @@ function checkIfReservationRequired(requestedTimeStr, dayHours) {
   
   // Voor alle andere tijden: reservering vereist (veilige standaard)
   return true;
+}
+
+// Helper functie om tijdspecifieke max party size op te halen
+function getTimeSpecificMaxPartySize(requestedTimeStr, settings) {
+  const timeSlots = settings.time_specific_max_party_size || [];
+  const timeSlot = timeSlots.find(slot => {
+    const [openTime, closeTime] = slot.time_range.split('-');
+    return requestedTimeStr >= openTime && requestedTimeStr <= closeTime;
+  });
+
+  if (timeSlot) {
+    return parseInt(timeSlot.max_party_size, 10);
+  }
+  return null;
+}
+
+// Helper functie om de tijdslot naam te krijgen
+function getTimeSlot(requestedTimeStr) {
+  const timeSlots = [
+    { time_range: "08:00-10:00", name: "Ochtend" },
+    { time_range: "10:00-12:00", name: "Middag" },
+    { time_range: "12:00-14:00", name: "Lunch" },
+    { time_range: "14:00-16:00", name: "Middag" },
+    { time_range: "16:00-18:00", name: "Avond" },
+    { time_range: "18:00-20:00", name: "Diner" },
+    { time_range: "20:00-22:00", name: "Avond" },
+    { time_range: "22:00-00:00", name: "Nacht" }
+  ];
+
+  const foundSlot = timeSlots.find(slot => {
+    const [openTime, closeTime] = slot.time_range.split('-');
+    return requestedTimeStr >= openTime && requestedTimeStr < closeTime;
+  });
+
+  return foundSlot ? foundSlot.name : "Onbekend";
 }
 
 // Check restaurant capaciteit
