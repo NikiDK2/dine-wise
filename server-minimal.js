@@ -408,9 +408,9 @@ async function handleCheckAvailability(req, res) {
         res.end(
           JSON.stringify({
             success: false,
-            error: "Restaurant niet gevonden in database",
-            details:
-              "Het opgegeven restaurant bestaat niet of is niet toegankelijk.",
+            error: "Restaurant niet gevonden",
+            details: `Restaurant met ID '${restaurantId}' bestaat niet in de database. Controleer het restaurant ID.`,
+            requested_restaurant_id: restaurantId,
           })
         );
         return;
@@ -443,13 +443,17 @@ async function handleCheckAvailability(req, res) {
     const openingHours = restaurant.opening_hours || {};
     const dayHours = openingHours[dayOfWeek];
 
-    if (!dayHours || !dayHours.open || !dayHours.close) {
+    // Check of restaurant gesloten is op deze dag
+    if (!dayHours || dayHours.closed || !dayHours.open || !dayHours.close) {
+      const dayName = requestedDate.toLocaleDateString("nl-NL", { weekday: "long" });
       res.writeHead(400, { "Content-Type": "application/json" });
       res.end(
         JSON.stringify({
           success: false,
           error: "Restaurant gesloten",
-          details: `Restaurant is gesloten op ${dayOfWeek}`,
+          details: `Restaurant is gesloten op ${dayName}. Stel eerst de openingstijden in via de app.`,
+          requested_date: requested_date,
+          day_of_week: dayName,
         })
       );
       return;
@@ -458,12 +462,16 @@ async function handleCheckAvailability(req, res) {
     // Check of tijdstip binnen openingstijden valt
     const requestedTimeStr = requested_time;
     if (requestedTimeStr < dayHours.open || requestedTimeStr > dayHours.close) {
+      const dayName = requestedDate.toLocaleDateString("nl-NL", { weekday: "long" });
       res.writeHead(400, { "Content-Type": "application/json" });
       res.end(
         JSON.stringify({
           success: false,
           error: "Buiten openingstijden",
-          details: `Restaurant is open van ${dayHours.open} tot ${dayHours.close}. Uw gewenste tijdstip ${requestedTimeStr} valt buiten deze openingstijden.`,
+          details: `Restaurant is open van ${dayHours.open} tot ${dayHours.close} op ${dayName}. Uw gewenste tijdstip ${requestedTimeStr} valt buiten deze openingstijden.`,
+          requested_time: requestedTimeStr,
+          opening_hours: dayHours,
+          day_of_week: dayName,
         })
       );
       return;
@@ -483,7 +491,10 @@ async function handleCheckAvailability(req, res) {
         JSON.stringify({
           success: false,
           error: "Ongeldige groepsgrootte",
-          details: `Groepsgrootte moet tussen ${minPartySize} en ${maxPartySize} personen zijn`,
+          details: `Groepsgrootte moet tussen ${minPartySize} en ${maxPartySize} personen zijn. U heeft ${party_size} personen opgegeven.`,
+          requested_party_size: party_size,
+          min_party_size: minPartySize,
+          max_party_size: maxPartySize,
         })
       );
       return;
@@ -572,8 +583,11 @@ async function handleCheckAvailability(req, res) {
       res.end(
         JSON.stringify({
           success: false,
-          error: "Tijdsslot vol",
-          details: `Maximum ${maxReservationsPerSlot} reserveringen per tijdsslot bereikt`,
+          error: "Te veel boekingen voor dat uur",
+          details: `Maximum ${maxReservationsPerSlot} reserveringen per tijdsslot bereikt voor ${requested_time}. Probeer een ander tijdstip.`,
+          requested_time: requested_time,
+          max_reservations_per_slot: maxReservationsPerSlot,
+          current_reservations: conflictingReservations.length,
           conflicting_reservations: conflictingReservations,
         })
       );
@@ -696,9 +710,9 @@ async function handleBookReservation(req, res) {
         res.end(
           JSON.stringify({
             success: false,
-            error: "Restaurant niet gevonden in database",
-            details:
-              "Het opgegeven restaurant bestaat niet of is niet toegankelijk.",
+            error: "Restaurant niet gevonden",
+            details: `Restaurant met ID '${restaurantId}' bestaat niet in de database. Controleer het restaurant ID.`,
+            requested_restaurant_id: restaurantId,
           })
         );
         return;
