@@ -781,7 +781,7 @@ async function handleBookReservation(req, res) {
       return;
     }
 
-    // 2. Check openingstijden
+    // 2. Check openingstijden en reserveringsbeleid
     const requestedDate = new Date(reservation_date);
     const dayOfWeek = requestedDate
       .toLocaleDateString("en-US", { weekday: "long" })
@@ -789,27 +789,45 @@ async function handleBookReservation(req, res) {
     const openingHours = restaurant.opening_hours || {};
     const dayHours = openingHours[dayOfWeek];
 
-    if (!dayHours || !dayHours.open || !dayHours.close) {
+    // Check of restaurant gesloten is op deze dag (nieuw formaat)
+    if (!dayHours || !dayHours.isOpen) {
+      const dayName = requestedDate.toLocaleDateString("nl-NL", { weekday: "long" });
       res.writeHead(400, { "Content-Type": "application/json" });
       res.end(
         JSON.stringify({
           success: false,
           error: "Restaurant gesloten",
-          details: `Restaurant is gesloten op ${dayOfWeek}`,
+          details: `Restaurant is gesloten op ${dayName}. Stel eerst de openingstijden in via de app.`,
+          requested_date: reservation_date,
+          day_of_week: dayName,
         })
       );
       return;
     }
 
-    // Check of tijdstip binnen openingstijden valt
+    // Check of tijdstip binnen openingstijden valt (nieuw formaat met timeSlots)
     const requestedTimeStr = reservation_time;
-    if (requestedTimeStr < dayHours.open || requestedTimeStr > dayHours.close) {
+    const timeSlots = dayHours.timeSlots || [];
+    let isWithinOpeningHours = false;
+    let applicableTimeSlot = null;
+
+    for (const slot of timeSlots) {
+      if (requestedTimeStr >= slot.openTime && requestedTimeStr <= slot.closeTime) {
+        isWithinOpeningHours = true;
+        applicableTimeSlot = slot;
+        break;
+      }
+    }
+
+    if (!isWithinOpeningHours) {
+      const dayName = requestedDate.toLocaleDateString("nl-NL", { weekday: "long" });
+      const timeSlotRanges = timeSlots.map(slot => `${slot.openTime}-${slot.closeTime}`).join(", ");
       res.writeHead(400, { "Content-Type": "application/json" });
       res.end(
         JSON.stringify({
           success: false,
           error: "Buiten openingstijden",
-          details: `Restaurant is open van ${dayHours.open} tot ${dayHours.close}. Uw gewenste tijdstip ${requestedTimeStr} valt buiten deze openingstijden.`,
+          details: `Restaurant is open op ${dayName} van ${timeSlotRanges}. Uw gewenste tijdstip ${requestedTimeStr} valt buiten deze openingstijden.`,
         })
       );
       return;
