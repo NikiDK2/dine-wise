@@ -544,8 +544,6 @@ async function handleCheckAvailability(req, res) {
       return;
     }
 
-    // Check of dit een grote groep is (vereist handmatige goedkeuring)
-    const isLargeGroup = party_size > largeGroupThreshold;
 
     // 4. Haal totale restaurant capaciteit op
     let tables = [];
@@ -883,8 +881,6 @@ async function handleBookReservation(req, res) {
       return;
     }
 
-    // Check of dit een grote groep is (vereist handmatige goedkeuring)
-    const isLargeGroup = party_size > largeGroupThreshold;
 
     // 4. Haal totale restaurant capaciteit op
     let tables = [];
@@ -1041,8 +1037,6 @@ async function handleBookReservation(req, res) {
     console.log(`  - Limiet overschreden: ${timeSpecificMaxForSlot && (currentTotalForTimeSlot + party_size) > timeSpecificMaxForSlot}`);
     console.log(`  - Aantal reserveringen voor dit tijdstip: ${allReservationsForTimeSlot.length}`);
 
-    // Check of dit een grote groep is (vereist handmatige goedkeuring)
-    const isLargeGroup = party_size > largeGroupThreshold;
 
     // 8. Check max reserveringen per slot
     if (overlappingReservations.length >= maxReservationsPerSlot) {
