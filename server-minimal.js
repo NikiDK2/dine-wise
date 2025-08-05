@@ -435,7 +435,7 @@ async function handleCheckAvailability(req, res) {
       return;
     }
 
-    // 2. Check openingstijden
+    // 2. Check openingstijden en reserveringsbeleid
     const requestedDate = new Date(requested_date);
     const dayOfWeek = requestedDate
       .toLocaleDateString("en-US", { weekday: "long" })
@@ -472,6 +472,30 @@ async function handleCheckAvailability(req, res) {
           requested_time: requestedTimeStr,
           opening_hours: dayHours,
           day_of_week: dayName,
+        })
+      );
+      return;
+    }
+
+    // Check of reservering nodig is voor dit tijdstip
+    const requiresReservation = checkIfReservationRequired(requestedTimeStr, dayHours);
+    
+    if (!requiresReservation) {
+      const dayName = requestedDate.toLocaleDateString("nl-NL", { weekday: "long" });
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(
+        JSON.stringify({
+          success: true,
+          available: true,
+          requires_reservation: false,
+          requested_date,
+          requested_time,
+          party_size,
+          restaurant_name: restaurant.name,
+          opening_hours: dayHours,
+          day_of_week: dayName,
+          message: `Reservering niet nodig voor ${requestedTimeStr} op ${dayName}. U kunt gewoon langskomen.`,
+          details: "Dit tijdstip valt buiten de drukke periodes. Reserveringen zijn niet verplicht.",
         })
       );
       return;
@@ -1149,6 +1173,45 @@ function generateAlternativeTimes(requestedTime, dayHours) {
   }
 
   return alternatives;
+}
+
+// Helper functie om te bepalen of een reservering vereist is
+function checkIfReservationRequired(requestedTimeStr, dayHours) {
+  // Definieer drukke periodes waar reserveringen verplicht zijn
+  const busyPeriods = [
+    { start: "12:00", end: "14:00", name: "lunch" },
+    { start: "18:00", end: "22:00", name: "diner" }
+  ];
+  
+  // Definieer rustige periodes waar geen reserveringen nodig zijn
+  const quietPeriods = [
+    { start: "14:00", end: "17:00", name: "middag" }
+  ];
+  
+  const requestedTime = new Date(`2000-01-01T${requestedTimeStr}:00`);
+  
+  // Check of het tijdstip in een drukke periode valt
+  for (const period of busyPeriods) {
+    const periodStart = new Date(`2000-01-01T${period.start}:00`);
+    const periodEnd = new Date(`2000-01-01T${period.end}:00`);
+    
+    if (requestedTime >= periodStart && requestedTime < periodEnd) {
+      return true; // Reservering vereist
+    }
+  }
+  
+  // Check of het tijdstip in een rustige periode valt
+  for (const period of quietPeriods) {
+    const periodStart = new Date(`2000-01-01T${period.start}:00`);
+    const periodEnd = new Date(`2000-01-01T${period.end}:00`);
+    
+    if (requestedTime >= periodStart && requestedTime < periodEnd) {
+      return false; // Geen reservering nodig
+    }
+  }
+  
+  // Voor alle andere tijden: reservering vereist (veilige standaard)
+  return true;
 }
 
 // Check restaurant capaciteit
