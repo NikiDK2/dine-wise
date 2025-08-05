@@ -48,25 +48,20 @@ export default function Guests() {
   const { data: customers = [] } = useCustomers(selectedRestaurant?.id);
   const deleteAllCustomers = useDeleteAllCustomers();
 
-  // Gebruik search API voor specifieke zoektermen
+  // Gebruik search API voor alle zoektermen (inclusief lege zoekterm)
   const { data: searchResults = [] } = useSearchCustomers(
     selectedRestaurant?.id,
-    searchTerm.length >= 2 ? searchTerm : undefined
+    searchTerm || ""
   );
 
-  // Gebruik list API voor algemene weergave
-  const { data: allCustomers = [] } = useCustomers(selectedRestaurant?.id);
-
-  // Filter customers client-side voor algemene weergave
-  const filteredCustomers = allCustomers.filter(
-    (customer) =>
-      customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      customer.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      customer.phone?.includes(searchTerm)
+  // Gebruik search API voor algemene weergave (lege zoekterm)
+  const { data: allCustomers = [] } = useSearchCustomers(
+    selectedRestaurant?.id,
+    ""
   );
 
-  // Combineer search results met filtered customers
-  const displayCustomers = searchTerm.length >= 2 ? searchResults : filteredCustomers;
+  // Combineer search results met all customers
+  const displayCustomers = searchTerm ? searchResults : allCustomers;
 
   // Debug logging
   console.log("Debug - Restaurants:", restaurants.length);
