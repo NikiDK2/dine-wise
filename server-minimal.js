@@ -621,6 +621,19 @@ async function handleCheckAvailability(req, res) {
     );
     const availableCapacity = totalCapacity - occupiedCapacity;
 
+    // 7. Check tijdsspecifieke capaciteitslimieten
+    const timeSpecificMaxForSlot = getTimeSpecificMaxPartySize(requestedTimeStr, settings);
+    const currentTotalForTimeSlot = conflictingReservations.reduce(
+      (sum, res) => sum + res.party_size,
+      0
+    );
+
+    // Check tijdsspecifieke limiet
+    let timeSpecificLimitExceeded = false;
+    if (timeSpecificMaxForSlot && (currentTotalForTimeSlot + party_size) > timeSpecificMaxForSlot) {
+      timeSpecificLimitExceeded = true;
+    }
+
     // Check max reserveringen per slot
     if (conflictingReservations.length >= maxReservationsPerSlot) {
       res.writeHead(400, { "Content-Type": "application/json" });
@@ -638,7 +651,24 @@ async function handleCheckAvailability(req, res) {
       return;
     }
 
-    const isAvailable = availableCapacity >= party_size;
+    // Check tijdsspecifieke capaciteitslimiet
+    if (timeSpecificLimitExceeded) {
+      res.writeHead(400, { "Content-Type": "application/json" });
+      res.end(
+        JSON.stringify({
+          success: false,
+          error: "Tijdsspecifieke capaciteitslimiet overschreden",
+          details: `Maximum ${timeSpecificMaxForSlot} personen toegestaan voor dit tijdstip. Huidige reserveringen: ${currentTotalForTimeSlot}, nieuwe reservering: ${party_size}`,
+          time_specific_max: timeSpecificMaxForSlot,
+          current_total_for_timeslot: currentTotalForTimeSlot,
+          requested_party_size: party_size,
+          conflicting_reservations: conflictingReservations,
+        })
+      );
+      return;
+    }
+
+    const isAvailable = availableCapacity >= party_size && !timeSpecificLimitExceeded;
 
     const alternativeTimes = generateAlternativeTimes(requested_time, dayHours);
 
@@ -926,7 +956,35 @@ async function handleBookReservation(req, res) {
     );
     const availableCapacity = totalCapacity - occupiedCapacity;
 
-    // 7. Check of er voldoende capaciteit is
+    // 7. Check tijdsspecifieke capaciteitslimieten
+    const timeSpecificMaxForSlot = getTimeSpecificMaxPartySize(reservation_time, settings);
+    
+    // Haal alle reserveringen op voor het specifieke tijdstip (niet alleen overlappende)
+    let allReservationsForTimeSlot = [];
+    try {
+      const { data: allReservations, error: allReservationsError } = await supabase
+        .from("reservations")
+        .select("id, customer_name, reservation_time, party_size, status")
+        .eq("restaurant_id", restaurantId)
+        .eq("reservation_date", reservation_date)
+        .eq("reservation_time", reservation_time)
+        .not("status", "eq", "cancelled");
+
+      if (!allReservationsError) {
+        allReservationsForTimeSlot = allReservations || [];
+      }
+    } catch (error) {
+      console.error("Error bij ophalen reserveringen voor tijdstip:", error);
+    }
+
+    const currentTotalForTimeSlot = allReservationsForTimeSlot.reduce(
+      (sum, res) => sum + res.party_size,
+      0
+    );
+    const remainingCapacityForTimeSlot = timeSpecificMaxForSlot ? 
+      (timeSpecificMaxForSlot - currentTotalForTimeSlot) : availableCapacity;
+
+    // 8. Check of er voldoende capaciteit is (zowel totaal als tijdsspecifiek)
     if (availableCapacity < party_size) {
       const alternativeTimes = generateAlternativeTimes(
         reservation_time,
@@ -949,6 +1007,42 @@ async function handleBookReservation(req, res) {
       );
       return;
     }
+
+    // Check tijdsspecifieke limiet
+    if (timeSpecificMaxForSlot && (currentTotalForTimeSlot + party_size) > timeSpecificMaxForSlot) {
+      const alternativeTimes = generateAlternativeTimes(
+        reservation_time,
+        dayHours
+      );
+
+      res.writeHead(400, { "Content-Type": "application/json" });
+      res.end(
+        JSON.stringify({
+          success: false,
+          error: "Tijdsspecifieke capaciteitslimiet overschreden",
+          details: `Maximum ${timeSpecificMaxForSlot} personen toegestaan voor dit tijdstip. Huidige reserveringen: ${currentTotalForTimeSlot}, nieuwe reservering: ${party_size}`,
+          time_specific_max: timeSpecificMaxForSlot,
+          current_total_for_timeslot: currentTotalForTimeSlot,
+          requested_party_size: party_size,
+          conflicting_reservations: overlappingReservations,
+          alternative_times: alternativeTimes,
+          unavailability_reason: "tijdsspecifieke_limiet_overschreden",
+        })
+      );
+      return;
+    }
+
+    // Debug logging
+    console.log(`🔍 Capaciteitscontrole voor ${reservation_time}:`);
+    console.log(`  - Tijdsspecifieke max: ${timeSpecificMaxForSlot}`);
+    console.log(`  - Huidige totaal voor tijdslot: ${currentTotalForTimeSlot}`);
+    console.log(`  - Nieuwe reservering: ${party_size}`);
+    console.log(`  - Totaal na reservering: ${currentTotalForTimeSlot + party_size}`);
+    console.log(`  - Limiet overschreden: ${timeSpecificMaxForSlot && (currentTotalForTimeSlot + party_size) > timeSpecificMaxForSlot}`);
+    console.log(`  - Aantal reserveringen voor dit tijdstip: ${allReservationsForTimeSlot.length}`);
+
+    // Check of dit een grote groep is (vereist handmatige goedkeuring)
+    const isLargeGroup = party_size > largeGroupThreshold;
 
     // 8. Check max reserveringen per slot
     if (overlappingReservations.length >= maxReservationsPerSlot) {
