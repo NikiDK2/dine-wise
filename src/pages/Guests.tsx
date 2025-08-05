@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { Search, Plus, Users, Phone, Mail, Calendar, User, Trash2 } from "lucide-react";
+import { Search, Plus, Users, Phone, Mail, Calendar, User, Trash2, Edit } from "lucide-react";
 import { Header } from "@/components/layout/Header";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { useRestaurants } from "@/hooks/useRestaurants";
 import { useCustomers, useDeleteAllCustomers } from "@/hooks/useCustomers";
 import { CreateCustomerModal } from "@/components/customers/CreateCustomerModal";
+import { EditCustomerModal } from "@/components/customers/EditCustomerModal";
 import { CsvImportModal } from "@/components/customers/CsvImportModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,6 +19,8 @@ import { nl } from "date-fns/locale";
 
 export default function Guests() {
   const [searchTerm, setSearchTerm] = useState("");
+  const [editingCustomer, setEditingCustomer] = useState<any>(null);
+  const [editModalOpen, setEditModalOpen] = useState(false);
   const { data: restaurants = [] } = useRestaurants();
   const selectedRestaurant = restaurants[0];
   const { data: customers = [] } = useCustomers(selectedRestaurant?.id);
@@ -236,6 +239,17 @@ export default function Guests() {
                               )}
                             </div>
                           </div>
+                          
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setEditingCustomer(customer);
+                              setEditModalOpen(true);
+                            }}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
                         </div>
                       </CardContent>
                     </Card>
@@ -318,6 +332,15 @@ export default function Guests() {
           </div>
         </main>
       </div>
+      
+      {/* Edit Customer Modal */}
+      {editingCustomer && (
+        <EditCustomerModal
+          customer={editingCustomer}
+          open={editModalOpen}
+          onOpenChange={setEditModalOpen}
+        />
+      )}
     </div>
   );
 }

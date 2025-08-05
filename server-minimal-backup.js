@@ -168,24 +168,6 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // 6. GET /api/customers/search - Zoek klantgegevens op naam
-  if (req.url.startsWith("/api/customers/search") && req.method === "GET") {
-    handleCustomerSearch(req, res);
-    return;
-  }
-
-  // 7. PUT /api/customers/update - Update klantgegevens
-  if (req.url === "/api/customers/update" && req.method === "PUT") {
-    handleUpdateCustomer(req, res);
-    return;
-  }
-
-  // 8. DELETE /api/customers/delete - Verwijder klant
-  if (req.url === "/api/customers/delete" && req.method === "DELETE") {
-    handleDeleteCustomer(req, res);
-    return;
-  }
-
   // Serve static files
   let filePath = req.url;
   if (filePath === "/" || filePath === "") {
@@ -232,7 +214,6 @@ async function handleFreeBusy(req, res) {
     const url = new URL(req.url, `http://localhost:${PORT}`);
     const restaurant_id = url.searchParams.get("restaurant_id");
     const date = url.searchParams.get("date");
-    const time = url.searchParams.get("time"); // Optionele tijd parameter
 
     if (!restaurant_id || !date) {
       res.writeHead(400, { "Content-Type": "application/json" });
@@ -270,7 +251,7 @@ async function handleFreeBusy(req, res) {
     }
 
     // Genereer free/busy periods
-    const freeBusyPeriods = generateFreeBusyPeriods(reservations || [], time);
+    const freeBusyPeriods = generateFreeBusyPeriods(reservations || []);
 
     res.writeHead(200, { "Content-Type": "application/json" });
     res.end(
@@ -278,12 +259,9 @@ async function handleFreeBusy(req, res) {
         success: true,
         restaurant_id,
         date,
-        time: time || null,
         free_busy_periods: freeBusyPeriods,
         total_reservations: reservations?.length || 0,
-        message: time
-          ? `Free/Busy informatie voor ${date} om ${time} (echte data van Supabase)`
-          : `Free/Busy informatie voor ${date} (echte data van Supabase)`,
+        message: `Free/Busy informatie voor ${date} (echte data van Supabase)`,
       })
     );
   } catch (error) {
@@ -467,9 +445,7 @@ async function handleCheckAvailability(req, res) {
 
     // Check of restaurant gesloten is op deze dag (nieuw formaat)
     if (!dayHours || !dayHours.isOpen) {
-      const dayName = requestedDate.toLocaleDateString("nl-NL", {
-        weekday: "long",
-      });
+      const dayName = requestedDate.toLocaleDateString("nl-NL", { weekday: "long" });
       res.writeHead(400, { "Content-Type": "application/json" });
       res.end(
         JSON.stringify({
@@ -490,10 +466,7 @@ async function handleCheckAvailability(req, res) {
     let applicableTimeSlot = null;
 
     for (const slot of timeSlots) {
-      if (
-        requestedTimeStr >= slot.openTime &&
-        requestedTimeStr <= slot.closeTime
-      ) {
+      if (requestedTimeStr >= slot.openTime && requestedTimeStr <= slot.closeTime) {
         isWithinOpeningHours = true;
         applicableTimeSlot = slot;
         break;
@@ -501,12 +474,8 @@ async function handleCheckAvailability(req, res) {
     }
 
     if (!isWithinOpeningHours) {
-      const dayName = requestedDate.toLocaleDateString("nl-NL", {
-        weekday: "long",
-      });
-      const timeSlotsText = timeSlots
-        .map((slot) => `${slot.openTime}-${slot.closeTime}`)
-        .join(", ");
+      const dayName = requestedDate.toLocaleDateString("nl-NL", { weekday: "long" });
+      const timeSlotsText = timeSlots.map(slot => `${slot.openTime}-${slot.closeTime}`).join(", ");
       res.writeHead(400, { "Content-Type": "application/json" });
       res.end(
         JSON.stringify({
@@ -522,15 +491,10 @@ async function handleCheckAvailability(req, res) {
     }
 
     // Check of reservering nodig is voor dit tijdstip
-    const requiresReservation = checkIfReservationRequired(
-      requestedTimeStr,
-      dayHours
-    );
-
+    const requiresReservation = checkIfReservationRequired(requestedTimeStr, dayHours);
+    
     if (!requiresReservation) {
-      const dayName = requestedDate.toLocaleDateString("nl-NL", {
-        weekday: "long",
-      });
+      const dayName = requestedDate.toLocaleDateString("nl-NL", { weekday: "long" });
       res.writeHead(200, { "Content-Type": "application/json" });
       res.end(
         JSON.stringify({
@@ -544,8 +508,7 @@ async function handleCheckAvailability(req, res) {
           opening_hours: dayHours,
           day_of_week: dayName,
           message: `Reservering niet nodig voor ${requestedTimeStr} op ${dayName}. U kunt gewoon langskomen.`,
-          details:
-            "Dit tijdstip valt buiten de drukke periodes. Reserveringen zijn niet verplicht.",
+          details: "Dit tijdstip valt buiten de drukke periodes. Reserveringen zijn niet verplicht.",
         })
       );
       return;
@@ -560,10 +523,7 @@ async function handleCheckAvailability(req, res) {
     const largeGroupThreshold = settings.large_group_threshold || 6; // Groepen > 6 personen
 
     // Check tijdspecifieke groepsgrootte limieten
-    const timeSpecificMaxPartySize = getTimeSpecificMaxPartySize(
-      requestedTimeStr,
-      settings
-    );
+    const timeSpecificMaxPartySize = getTimeSpecificMaxPartySize(requestedTimeStr, settings);
     const effectiveMaxPartySize = timeSpecificMaxPartySize || maxPartySize;
 
     if (party_size < minPartySize || party_size > effectiveMaxPartySize) {
@@ -583,6 +543,9 @@ async function handleCheckAvailability(req, res) {
       );
       return;
     }
+
+    // Check of dit een grote groep is (vereist handmatige goedkeuring)
+    const isLargeGroup = party_size > largeGroupThreshold;
 
     // 4. Haal totale restaurant capaciteit op
     let tables = [];
@@ -659,41 +622,15 @@ async function handleCheckAvailability(req, res) {
     const availableCapacity = totalCapacity - occupiedCapacity;
 
     // 7. Check tijdsspecifieke capaciteitslimieten
-    const timeSpecificMaxForSlot = getTimeSpecificMaxPartySize(
-      requestedTimeStr,
-      settings
-    );
-
-    // Haal alle reserveringen op voor het specifieke tijdstip (niet alleen overlappende)
-    let allReservationsForTimeSlot = [];
-    try {
-      const { data: allReservations, error: allReservationsError } =
-        await supabase
-          .from("reservations")
-          .select("id, customer_name, reservation_time, party_size, status")
-          .eq("restaurant_id", restaurantId)
-          .eq("reservation_date", requested_date)
-          .eq("reservation_time", requested_time)
-          .not("status", "eq", "cancelled");
-
-      if (!allReservationsError) {
-        allReservationsForTimeSlot = allReservations || [];
-      }
-    } catch (error) {
-      console.error("Error bij ophalen reserveringen voor tijdstip:", error);
-    }
-
-    const currentTotalForTimeSlot = allReservationsForTimeSlot.reduce(
+    const timeSpecificMaxForSlot = getTimeSpecificMaxPartySize(requestedTimeStr, settings);
+    const currentTotalForTimeSlot = conflictingReservations.reduce(
       (sum, res) => sum + res.party_size,
       0
     );
 
     // Check tijdsspecifieke limiet
     let timeSpecificLimitExceeded = false;
-    if (
-      timeSpecificMaxForSlot &&
-      currentTotalForTimeSlot + party_size > timeSpecificMaxForSlot
-    ) {
+    if (timeSpecificMaxForSlot && (currentTotalForTimeSlot + party_size) > timeSpecificMaxForSlot) {
       timeSpecificLimitExceeded = true;
     }
 
@@ -731,31 +668,7 @@ async function handleCheckAvailability(req, res) {
       return;
     }
 
-    // Check of dit een grote groep is (vereist handmatige goedkeuring)
-    const isLargeGroup = party_size > largeGroupThreshold;
-
-    // Debug logging
-    console.log(
-      `🔍 Check-availability capaciteitscontrole voor ${requested_time}:`
-    );
-    console.log(`  - Tijdsspecifieke max: ${timeSpecificMaxForSlot}`);
-    console.log(`  - Huidige totaal voor tijdslot: ${currentTotalForTimeSlot}`);
-    console.log(`  - Nieuwe reservering: ${party_size}`);
-    console.log(
-      `  - Totaal na reservering: ${currentTotalForTimeSlot + party_size}`
-    );
-    console.log(
-      `  - Limiet overschreden: ${
-        timeSpecificMaxForSlot &&
-        currentTotalForTimeSlot + party_size > timeSpecificMaxForSlot
-      }`
-    );
-    console.log(
-      `  - Aantal reserveringen voor dit tijdstip: ${allReservationsForTimeSlot.length}`
-    );
-
-    const isAvailable =
-      availableCapacity >= party_size && !timeSpecificLimitExceeded;
+    const isAvailable = availableCapacity >= party_size && !timeSpecificLimitExceeded;
 
     const alternativeTimes = generateAlternativeTimes(requested_time, dayHours);
 
@@ -908,9 +821,7 @@ async function handleBookReservation(req, res) {
 
     // Check of restaurant gesloten is op deze dag (nieuw formaat)
     if (!dayHours || !dayHours.isOpen) {
-      const dayName = requestedDate.toLocaleDateString("nl-NL", {
-        weekday: "long",
-      });
+      const dayName = requestedDate.toLocaleDateString("nl-NL", { weekday: "long" });
       res.writeHead(400, { "Content-Type": "application/json" });
       res.end(
         JSON.stringify({
@@ -931,10 +842,7 @@ async function handleBookReservation(req, res) {
     let applicableTimeSlot = null;
 
     for (const slot of timeSlots) {
-      if (
-        requestedTimeStr >= slot.openTime &&
-        requestedTimeStr <= slot.closeTime
-      ) {
+      if (requestedTimeStr >= slot.openTime && requestedTimeStr <= slot.closeTime) {
         isWithinOpeningHours = true;
         applicableTimeSlot = slot;
         break;
@@ -942,12 +850,8 @@ async function handleBookReservation(req, res) {
     }
 
     if (!isWithinOpeningHours) {
-      const dayName = requestedDate.toLocaleDateString("nl-NL", {
-        weekday: "long",
-      });
-      const timeSlotRanges = timeSlots
-        .map((slot) => `${slot.openTime}-${slot.closeTime}`)
-        .join(", ");
+      const dayName = requestedDate.toLocaleDateString("nl-NL", { weekday: "long" });
+      const timeSlotRanges = timeSlots.map(slot => `${slot.openTime}-${slot.closeTime}`).join(", ");
       res.writeHead(400, { "Content-Type": "application/json" });
       res.end(
         JSON.stringify({
@@ -978,6 +882,9 @@ async function handleBookReservation(req, res) {
       );
       return;
     }
+
+    // Check of dit een grote groep is (vereist handmatige goedkeuring)
+    const isLargeGroup = party_size > largeGroupThreshold;
 
     // 4. Haal totale restaurant capaciteit op
     let tables = [];
@@ -1050,22 +957,18 @@ async function handleBookReservation(req, res) {
     const availableCapacity = totalCapacity - occupiedCapacity;
 
     // 7. Check tijdsspecifieke capaciteitslimieten
-    const timeSpecificMaxForSlot = getTimeSpecificMaxPartySize(
-      reservation_time,
-      settings
-    );
-
+    const timeSpecificMaxForSlot = getTimeSpecificMaxPartySize(reservation_time, settings);
+    
     // Haal alle reserveringen op voor het specifieke tijdstip (niet alleen overlappende)
     let allReservationsForTimeSlot = [];
     try {
-      const { data: allReservations, error: allReservationsError } =
-        await supabase
-          .from("reservations")
-          .select("id, customer_name, reservation_time, party_size, status")
-          .eq("restaurant_id", restaurantId)
-          .eq("reservation_date", reservation_date)
-          .eq("reservation_time", reservation_time)
-          .not("status", "eq", "cancelled");
+      const { data: allReservations, error: allReservationsError } = await supabase
+        .from("reservations")
+        .select("id, customer_name, reservation_time, party_size, status")
+        .eq("restaurant_id", restaurantId)
+        .eq("reservation_date", reservation_date)
+        .eq("reservation_time", reservation_time)
+        .not("status", "eq", "cancelled");
 
       if (!allReservationsError) {
         allReservationsForTimeSlot = allReservations || [];
@@ -1078,9 +981,8 @@ async function handleBookReservation(req, res) {
       (sum, res) => sum + res.party_size,
       0
     );
-    const remainingCapacityForTimeSlot = timeSpecificMaxForSlot
-      ? timeSpecificMaxForSlot - currentTotalForTimeSlot
-      : availableCapacity;
+    const remainingCapacityForTimeSlot = timeSpecificMaxForSlot ? 
+      (timeSpecificMaxForSlot - currentTotalForTimeSlot) : availableCapacity;
 
     // 8. Check of er voldoende capaciteit is (zowel totaal als tijdsspecifiek)
     if (availableCapacity < party_size) {
@@ -1107,10 +1009,7 @@ async function handleBookReservation(req, res) {
     }
 
     // Check tijdsspecifieke limiet
-    if (
-      timeSpecificMaxForSlot &&
-      currentTotalForTimeSlot + party_size > timeSpecificMaxForSlot
-    ) {
+    if (timeSpecificMaxForSlot && (currentTotalForTimeSlot + party_size) > timeSpecificMaxForSlot) {
       const alternativeTimes = generateAlternativeTimes(
         reservation_time,
         dayHours
@@ -1138,18 +1037,12 @@ async function handleBookReservation(req, res) {
     console.log(`  - Tijdsspecifieke max: ${timeSpecificMaxForSlot}`);
     console.log(`  - Huidige totaal voor tijdslot: ${currentTotalForTimeSlot}`);
     console.log(`  - Nieuwe reservering: ${party_size}`);
-    console.log(
-      `  - Totaal na reservering: ${currentTotalForTimeSlot + party_size}`
-    );
-    console.log(
-      `  - Limiet overschreden: ${
-        timeSpecificMaxForSlot &&
-        currentTotalForTimeSlot + party_size > timeSpecificMaxForSlot
-      }`
-    );
-    console.log(
-      `  - Aantal reserveringen voor dit tijdstip: ${allReservationsForTimeSlot.length}`
-    );
+    console.log(`  - Totaal na reservering: ${currentTotalForTimeSlot + party_size}`);
+    console.log(`  - Limiet overschreden: ${timeSpecificMaxForSlot && (currentTotalForTimeSlot + party_size) > timeSpecificMaxForSlot}`);
+    console.log(`  - Aantal reserveringen voor dit tijdstip: ${allReservationsForTimeSlot.length}`);
+
+    // Check of dit een grote groep is (vereist handmatige goedkeuring)
+    const isLargeGroup = party_size > largeGroupThreshold;
 
     // 8. Check max reserveringen per slot
     if (overlappingReservations.length >= maxReservationsPerSlot) {
@@ -1174,7 +1067,6 @@ async function handleBookReservation(req, res) {
       );
       return;
     }
-    const isLargeGroup = party_size > largeGroupThreshold;
     const reservationStatus = isLargeGroup ? "pending" : "confirmed";
 
     // 4. Maak de reservering aan
@@ -1341,158 +1233,33 @@ async function handleDeleteReservation(req, res) {
 }
 
 // Helper functie om free/busy periods te genereren
-function generateFreeBusyPeriods(reservations, requestedTime = null) {
+function generateFreeBusyPeriods(reservations) {
   const periods = [];
+  const startTime = "17:00";
+  const endTime = "22:00";
 
-  // Restaurant openingstijden: 08:30 - 16:00
-  const openingTime = "08:30";
-  const closingTime = "16:00";
-
-  // Definieer tijdsperiodes waar reserveringen verplicht zijn (gebaseerd op capaciteitsinstellingen)
-  const timePeriods = [
-    { name: "Ochtend", start: "08:30", end: "12:00", maxCapacity: 12 },
-    { name: "Lunch", start: "12:00", end: "14:00", maxCapacity: 15 },
-    { name: "Middag", start: "14:00", end: "16:00", maxCapacity: 10 },
-  ];
-
-  // Groepeer reserveringen per periode
-  const reservationsByPeriod = {};
-  reservations.forEach((reservation) => {
-    const time = reservation.reservation_time;
-    const timeStr = time.slice(0, 5); // Neem alleen HH:MM
-
-    // Bepaal in welke periode deze reservering valt
-    for (const period of timePeriods) {
-      if (timeStr >= period.start && timeStr < period.end) {
-        if (!reservationsByPeriod[period.name]) {
-          reservationsByPeriod[period.name] = [];
-        }
-        reservationsByPeriod[period.name].push(reservation);
-        break;
-      }
-    }
+  // Voor nu: eenvoudige demo periods
+  // Later: echte logica gebaseerd op reserveringen
+  periods.push({
+    type: "free",
+    start_time: "17:00",
+    end_time: "18:30",
   });
 
-  // Als er een specifieke tijd is opgevraagd, toon alleen die shift met 30-minuten sloten
-  if (requestedTime) {
-    // Bepaal in welke periode de opgevraagde tijd valt
-    const targetPeriod = timePeriods.find(
-      (period) => requestedTime >= period.start && requestedTime < period.end
-    );
-
-    if (targetPeriod) {
-      const periodReservations = reservationsByPeriod[targetPeriod.name] || [];
-
-      // Genereer 30-minuten sloten binnen de target periode
-      const timeSlots = [];
-      const startTime = new Date(`2000-01-01T${targetPeriod.start}:00`);
-      const endTime = new Date(`2000-01-01T${targetPeriod.end}:00`);
-
-      for (
-        let time = new Date(startTime);
-        time < endTime;
-        time.setMinutes(time.getMinutes() + 30)
-      ) {
-        const timeString = time.toTimeString().slice(0, 5);
-        timeSlots.push(timeString);
-      }
-
-      // Groepeer reserveringen per 30-minuten slot
-      const reservationsBySlot = {};
-      periodReservations.forEach((reservation) => {
-        const time = reservation.reservation_time;
-        const timeStr = time.slice(0, 5);
-
-        // Bepaal in welk 30-minuten slot deze reservering valt
-        const timeDate = new Date(`2000-01-01T${timeStr}:00`);
-        const minutes = timeDate.getMinutes();
-        const slotStartMinutes = Math.floor(minutes / 30) * 30;
-        const slotStartTime = new Date(timeDate);
-        slotStartTime.setMinutes(slotStartMinutes);
-        const slotKey = slotStartTime.toTimeString().slice(0, 5);
-
-        if (!reservationsBySlot[slotKey]) {
-          reservationsBySlot[slotKey] = [];
-        }
-        reservationsBySlot[slotKey].push(reservation);
-      });
-
-      // Genereer periods voor elk 30-minuten slot binnen de target periode
-      let currentFreeStart = null;
-      let currentFreeEnd = null;
-
-      for (let i = 0; i < timeSlots.length - 1; i++) {
-        const currentTime = timeSlots[i];
-        const nextTime = timeSlots[i + 1];
-
-        const slotReservations = reservationsBySlot[currentTime] || [];
-
-        if (slotReservations.length > 0) {
-          // Als er reserveringen zijn, voeg eerst de huidige vrije periode toe (als die bestaat)
-          if (currentFreeStart !== null) {
-            periods.push({
-              type: "free",
-              start_time: currentFreeStart,
-              end_time: currentFreeEnd,
-              period_name: targetPeriod.name,
-              max_capacity: targetPeriod.maxCapacity,
-            });
-            currentFreeStart = null;
-            currentFreeEnd = null;
-          }
-
-          // Voeg bezet tijdslot toe
-          periods.push({
-            type: "busy",
-            start_time: currentTime,
-            end_time: nextTime,
-            reservations: slotReservations,
-            period_name: targetPeriod.name,
-            max_capacity: targetPeriod.maxCapacity,
-          });
-        } else {
-          // Als er geen reserveringen zijn, start of verleng de vrije periode
-          if (currentFreeStart === null) {
-            currentFreeStart = currentTime;
-          }
-          currentFreeEnd = nextTime;
-        }
-      }
-
-      // Voeg de laatste vrije periode toe (als die bestaat)
-      if (currentFreeStart !== null) {
-        periods.push({
-          type: "free",
-          start_time: currentFreeStart,
-          end_time: currentFreeEnd,
-          period_name: targetPeriod.name,
-          max_capacity: targetPeriod.maxCapacity,
-        });
-      }
-    }
-  } else {
-    // Genereer periods voor elke tijdsperiode (zoals voorheen)
-    for (const period of timePeriods) {
-      const periodReservations = reservationsByPeriod[period.name] || [];
-
-      if (periodReservations.length > 0) {
-        // Bezet tijdslot
-        periods.push({
-          type: "busy",
-          start_time: period.start,
-          end_time: period.end,
-          reservations: periodReservations,
-        });
-      } else {
-        // Vrij tijdslot
-        periods.push({
-          type: "free",
-          start_time: period.start,
-          end_time: period.end,
-        });
-      }
-    }
+  if (reservations.length > 0) {
+    periods.push({
+      type: "busy",
+      start_time: "18:30",
+      end_time: "19:30",
+      reservations: reservations.slice(0, 3), // Toon eerste 3 reserveringen
+    });
   }
+
+  periods.push({
+    type: "free",
+    start_time: "19:30",
+    end_time: "22:00",
+  });
 
   return periods;
 }
@@ -1545,34 +1312,36 @@ function checkIfReservationRequired(requestedTimeStr, dayHours) {
   // Definieer drukke periodes waar reserveringen verplicht zijn
   const busyPeriods = [
     { start: "12:00", end: "14:00", name: "lunch" },
-    { start: "18:00", end: "22:00", name: "diner" },
+    { start: "18:00", end: "22:00", name: "diner" }
   ];
-
+  
   // Definieer rustige periodes waar geen reserveringen nodig zijn
-  const quietPeriods = [{ start: "14:00", end: "17:00", name: "middag" }];
-
+  const quietPeriods = [
+    { start: "14:00", end: "17:00", name: "middag" }
+  ];
+  
   const requestedTime = new Date(`2000-01-01T${requestedTimeStr}:00`);
-
+  
   // Check of het tijdstip in een drukke periode valt
   for (const period of busyPeriods) {
     const periodStart = new Date(`2000-01-01T${period.start}:00`);
     const periodEnd = new Date(`2000-01-01T${period.end}:00`);
-
+    
     if (requestedTime >= periodStart && requestedTime < periodEnd) {
       return true; // Reservering vereist
     }
   }
-
+  
   // Check of het tijdstip in een rustige periode valt
   for (const period of quietPeriods) {
     const periodStart = new Date(`2000-01-01T${period.start}:00`);
     const periodEnd = new Date(`2000-01-01T${period.end}:00`);
-
+    
     if (requestedTime >= periodStart && requestedTime < periodEnd) {
       return false; // Geen reservering nodig
     }
   }
-
+  
   // Voor alle andere tijden: reservering vereist (veilige standaard)
   return true;
 }
@@ -1580,8 +1349,8 @@ function checkIfReservationRequired(requestedTimeStr, dayHours) {
 // Helper functie om tijdspecifieke max party size op te halen
 function getTimeSpecificMaxPartySize(requestedTimeStr, settings) {
   const timeSlots = settings.time_specific_max_party_size || [];
-  const timeSlot = timeSlots.find((slot) => {
-    const [openTime, closeTime] = slot.time_range.split("-");
+  const timeSlot = timeSlots.find(slot => {
+    const [openTime, closeTime] = slot.time_range.split('-');
     return requestedTimeStr >= openTime && requestedTimeStr <= closeTime;
   });
 
@@ -1601,318 +1370,15 @@ function getTimeSlot(requestedTimeStr) {
     { time_range: "16:00-18:00", name: "Avond" },
     { time_range: "18:00-20:00", name: "Diner" },
     { time_range: "20:00-22:00", name: "Avond" },
-    { time_range: "22:00-00:00", name: "Nacht" },
+    { time_range: "22:00-00:00", name: "Nacht" }
   ];
 
-  const foundSlot = timeSlots.find((slot) => {
-    const [openTime, closeTime] = slot.time_range.split("-");
+  const foundSlot = timeSlots.find(slot => {
+    const [openTime, closeTime] = slot.time_range.split('-');
     return requestedTimeStr >= openTime && requestedTimeStr < closeTime;
   });
 
   return foundSlot ? foundSlot.name : "Onbekend";
-}
-
-// Zoek klantgegevens op naam
-async function handleCustomerSearch(req, res) {
-  try {
-    // Haal parameters uit URL
-    const url = new URL(req.url, `http://${req.headers.host}`);
-    const customerName = url.searchParams.get("name");
-    const restaurantId = url.searchParams.get("restaurant_id") || RESTAURANT_ID;
-
-    if (!customerName) {
-      res.writeHead(400, { "Content-Type": "application/json" });
-      res.end(
-        JSON.stringify({
-          success: false,
-          error: "Naam parameter is verplicht",
-          message:
-            "Gebruik: /api/customers/search?name=KLANTNAAM&restaurant_id=ID",
-        })
-      );
-      return;
-    }
-
-    console.log(
-      `🔍 Zoeken naar klant: "${customerName}" in restaurant: ${restaurantId}`
-    );
-
-    // Zoek klant in database (case-insensitive zoeken)
-    const { data: customers, error } = await supabase
-      .from("customers")
-      .select(
-        `
-        id,
-        restaurant_id,
-        name,
-        email,
-        phone,
-        professional_email,
-        professional_phone,
-        first_name,
-        last_name,
-        address,
-        city,
-        zip,
-        country,
-        birthdate,
-        company,
-        language,
-        guest_status,
-        email_optin_marketing,
-        sms_optin_marketing,
-        email_optin_reviews,
-        sms_optin_reviews,
-        has_no_show,
-        is_blacklisted,
-        allergies,
-        allergies_tags,
-        preferences,
-        notes,
-        total_visits,
-        last_visit,
-        bookings_number,
-        created_at,
-        updated_at
-      `
-      )
-      .eq("restaurant_id", restaurantId)
-      .ilike("name", `%${customerName}%`);
-
-    if (error) {
-      console.error("Supabase error bij klant zoeken:", error);
-      res.writeHead(500, { "Content-Type": "application/json" });
-      res.end(
-        JSON.stringify({
-          success: false,
-          error: "Database fout",
-          details: error.message,
-        })
-      );
-      return;
-    }
-
-    if (!customers || customers.length === 0) {
-      res.writeHead(200, { "Content-Type": "application/json" });
-      res.end(
-        JSON.stringify({
-          success: true,
-          message: `Geen klanten gevonden met naam: "${customerName}"`,
-          customers: [],
-          total_found: 0,
-        })
-      );
-      return;
-    }
-
-    console.log(
-      `✅ ${customers.length} klant(en) gevonden voor: "${customerName}"`
-    );
-
-    res.writeHead(200, { "Content-Type": "application/json" });
-    res.end(
-      JSON.stringify({
-        success: true,
-        message: `${customers.length} klant(en) gevonden voor: "${customerName}"`,
-        customers: customers,
-        total_found: customers.length,
-        search_term: customerName,
-        restaurant_id: restaurantId,
-      })
-    );
-  } catch (error) {
-    console.error("Error in customer search:", error);
-    res.writeHead(500, { "Content-Type": "application/json" });
-    res.end(
-      JSON.stringify({
-        success: false,
-        error: "Server fout",
-        details: error.message,
-      })
-    );
-  }
-}
-
-// Update klantgegevens
-async function handleUpdateCustomer(req, res) {
-  try {
-    let body = "";
-    req.on("data", (chunk) => {
-      body += chunk.toString();
-    });
-
-    req.on("end", async () => {
-      try {
-        const updates = JSON.parse(body);
-        const { id, ...customerUpdates } = updates;
-
-        if (!id) {
-          res.writeHead(400, { "Content-Type": "application/json" });
-          res.end(
-            JSON.stringify({
-              success: false,
-              error: "Klant ID is verplicht",
-              message: "Gebruik: PUT /api/customers/update met { id: 'KLANT_ID', ...updates }",
-            })
-          );
-          return;
-        }
-
-        console.log(`✏️ Update klant: ${id}`, customerUpdates);
-
-        // Update klant in database
-        const { data: customer, error } = await supabase
-          .from("customers")
-          .update(customerUpdates)
-          .eq("id", id)
-          .select()
-          .single();
-
-        if (error) {
-          console.error("❌ Fout bij updaten klant:", error);
-          res.writeHead(500, { "Content-Type": "application/json" });
-          res.end(
-            JSON.stringify({
-              success: false,
-              error: "Database fout",
-              details: error.message,
-            })
-          );
-          return;
-        }
-
-        console.log(`✅ Klant succesvol geüpdatet: ${customer.name}`);
-
-        res.writeHead(200, { "Content-Type": "application/json" });
-        res.end(
-          JSON.stringify({
-            success: true,
-            message: `Klant "${customer.name}" succesvol bijgewerkt`,
-            customer: customer,
-          })
-        );
-      } catch (parseError) {
-        console.error("❌ JSON parse fout:", parseError);
-        res.writeHead(400, { "Content-Type": "application/json" });
-        res.end(
-          JSON.stringify({
-            success: false,
-            error: "Ongeldige JSON",
-            details: parseError.message,
-          })
-        );
-      }
-    });
-  } catch (error) {
-    console.error("❌ Server fout bij update klant:", error);
-    res.writeHead(500, { "Content-Type": "application/json" });
-    res.end(
-      JSON.stringify({
-        success: false,
-        error: "Server fout",
-        details: error.message,
-      })
-    );
-  }
-}
-
-// Verwijder klant
-async function handleDeleteCustomer(req, res) {
-  try {
-    let body = "";
-    req.on("data", (chunk) => {
-      body += chunk.toString();
-    });
-
-    req.on("end", async () => {
-      try {
-        const { id } = JSON.parse(body);
-
-        if (!id) {
-          res.writeHead(400, { "Content-Type": "application/json" });
-          res.end(
-            JSON.stringify({
-              success: false,
-              error: "Klant ID is verplicht",
-              message: "Gebruik: DELETE /api/customers/delete met { id: 'KLANT_ID' }",
-            })
-          );
-          return;
-        }
-
-        console.log(`🗑️ Verwijder klant: ${id}`);
-
-        // Haal eerst klantgegevens op voor logging
-        const { data: customer, error: fetchError } = await supabase
-          .from("customers")
-          .select("name")
-          .eq("id", id)
-          .single();
-
-        if (fetchError) {
-          console.error("❌ Fout bij ophalen klant:", fetchError);
-          res.writeHead(404, { "Content-Type": "application/json" });
-          res.end(
-            JSON.stringify({
-              success: false,
-              error: "Klant niet gevonden",
-              details: fetchError.message,
-            })
-          );
-          return;
-        }
-
-        // Verwijder klant uit database
-        const { error } = await supabase
-          .from("customers")
-          .delete()
-          .eq("id", id);
-
-        if (error) {
-          console.error("❌ Fout bij verwijderen klant:", error);
-          res.writeHead(500, { "Content-Type": "application/json" });
-          res.end(
-            JSON.stringify({
-              success: false,
-              error: "Database fout",
-              details: error.message,
-            })
-          );
-          return;
-        }
-
-        console.log(`✅ Klant succesvol verwijderd: ${customer.name}`);
-
-        res.writeHead(200, { "Content-Type": "application/json" });
-        res.end(
-          JSON.stringify({
-            success: true,
-            message: `Klant "${customer.name}" succesvol verwijderd`,
-          })
-        );
-      } catch (parseError) {
-        console.error("❌ JSON parse fout:", parseError);
-        res.writeHead(400, { "Content-Type": "application/json" });
-        res.end(
-          JSON.stringify({
-            success: false,
-            error: "Ongeldige JSON",
-            details: parseError.message,
-          })
-        );
-      }
-    });
-  } catch (error) {
-    console.error("❌ Server fout bij verwijderen klant:", error);
-    res.writeHead(500, { "Content-Type": "application/json" });
-    res.end(
-      JSON.stringify({
-        success: false,
-        error: "Server fout",
-        details: error.message,
-      })
-    );
-  }
 }
 
 // Check restaurant capaciteit
@@ -1996,9 +1462,6 @@ server.listen(PORT, () => {
   console.log(`   - PUT /api/reservations/update`);
   console.log(`   - DELETE /api/reservations/delete`);
   console.log(`   - GET /api/restaurant/capacity`);
-  console.log(`   - GET /api/customers/search`);
-  console.log(`   - PUT /api/customers/update`);
-  console.log(`   - DELETE /api/customers/delete`);
   console.log(
     `🎯 Grote groepen (>6 personen) → Handmatige goedkeuring vereist`
   );
