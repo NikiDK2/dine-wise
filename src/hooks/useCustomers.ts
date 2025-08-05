@@ -80,16 +80,21 @@ export function useSearchCustomers(restaurantId?: string, searchTerm?: string) {
         return [];
       }
       
-      const { data, error } = await supabase
-        .from('customers')
-        .select('*')
-        .eq('restaurant_id', restaurantId)
-        .ilike('name', `%${searchTerm}%`)
-        .order('name', { ascending: true })
-        .limit(50);
+      console.log('🔍 useSearchCustomers - Searching for:', searchTerm);
       
-      if (error) throw error;
-      return data as Customer[];
+      // Gebruik de nieuwe API endpoint
+      const response = await fetch(`/api/customers/search?name=${encodeURIComponent(searchTerm)}&restaurant_id=${restaurantId}`);
+      const result = await response.json();
+      
+      console.log('🔍 useSearchCustomers - API response:', result);
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to search customers');
+      }
+      
+      console.log('🔍 useSearchCustomers - Returning customers:', result.customers?.length || 0);
+      
+      return result.customers as Customer[];
     },
     enabled: !!user && !!restaurantId && !!searchTerm && searchTerm.length >= 2,
   });
