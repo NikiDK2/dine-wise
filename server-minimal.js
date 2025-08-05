@@ -1647,13 +1647,39 @@ async function handleCustomerSearch(req, res) {
     const restaurantId = url.searchParams.get("restaurant_id") || RESTAURANT_ID;
 
     if (!customerName) {
-      res.writeHead(400, { "Content-Type": "application/json" });
+      // Als geen naam is opgegeven, haal alle klanten op
+      console.log(`📋 Ophalen van alle klanten voor restaurant: ${restaurantId}`);
+      
+      const { data: customers, error } = await supabase
+        .from("customers")
+        .select("*")
+        .eq("restaurant_id", restaurantId)
+        .order("name", { ascending: true })
+        .limit(10000);
+      
+      if (error) {
+        console.error("❌ Fout bij ophalen klanten:", error);
+        res.writeHead(500, { "Content-Type": "application/json" });
+        res.end(
+          JSON.stringify({
+            success: false,
+            error: "Database fout",
+            details: error.message,
+          })
+        );
+        return;
+      }
+      
+      console.log(`✅ ${customers.length} klant(en) opgehaald voor restaurant: ${restaurantId}`);
+      
+      res.writeHead(200, { "Content-Type": "application/json" });
       res.end(
         JSON.stringify({
-          success: false,
-          error: "Naam parameter is verplicht",
-          message:
-            "Gebruik: /api/customers/search?name=KLANTNAAM&restaurant_id=ID",
+          success: true,
+          message: `${customers.length} klant(en) opgehaald`,
+          customers: customers,
+          total_found: customers.length,
+          restaurant_id: restaurantId,
         })
       );
       return;

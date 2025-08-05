@@ -52,8 +52,8 @@ export function useCustomers(restaurantId?: string) {
       
       console.log('🔍 useCustomers - Fetching customers for restaurant:', restaurantId);
       
-      // Gebruik de nieuwe API endpoint
-      const response = await fetch(`/api/customers/list?restaurant_id=${restaurantId}`);
+      // Gebruik de search API met een lege zoekterm om alle klanten op te halen
+      const response = await fetch(`/api/customers/search?name=&restaurant_id=${restaurantId}`);
       const result = await response.json();
       
       console.log('🔍 useCustomers - API response:', result);
