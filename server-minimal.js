@@ -214,6 +214,7 @@ async function handleFreeBusy(req, res) {
     const url = new URL(req.url, `http://localhost:${PORT}`);
     const restaurant_id = url.searchParams.get("restaurant_id");
     const date = url.searchParams.get("date");
+    const time = url.searchParams.get("time"); // Optionele tijd parameter
 
     if (!restaurant_id || !date) {
       res.writeHead(400, { "Content-Type": "application/json" });
@@ -251,7 +252,7 @@ async function handleFreeBusy(req, res) {
     }
 
     // Genereer free/busy periods
-    const freeBusyPeriods = generateFreeBusyPeriods(reservations || []);
+    const freeBusyPeriods = generateFreeBusyPeriods(reservations || [], time);
 
     res.writeHead(200, { "Content-Type": "application/json" });
     res.end(
@@ -259,9 +260,12 @@ async function handleFreeBusy(req, res) {
         success: true,
         restaurant_id,
         date,
+        time: time || null,
         free_busy_periods: freeBusyPeriods,
         total_reservations: reservations?.length || 0,
-        message: `Free/Busy informatie voor ${date} (echte data van Supabase)`,
+        message: time 
+          ? `Free/Busy informatie voor ${date} om ${time} (echte data van Supabase)`
+          : `Free/Busy informatie voor ${date} (echte data van Supabase)`,
       })
     );
   } catch (error) {
@@ -1318,7 +1322,7 @@ async function handleDeleteReservation(req, res) {
 }
 
 // Helper functie om free/busy periods te genereren
-function generateFreeBusyPeriods(reservations) {
+function generateFreeBusyPeriods(reservations, requestedTime = null) {
   const periods = [];
 
   // Restaurant openingstijden: 08:30 - 16:00
@@ -1329,7 +1333,7 @@ function generateFreeBusyPeriods(reservations) {
   const timePeriods = [
     { name: "Ochtend", start: "08:30", end: "12:00", maxCapacity: 12 },
     { name: "Lunch", start: "12:00", end: "14:00", maxCapacity: 15 },
-    { name: "Middag", start: "14:00", end: "16:00", maxCapacity: 10 }
+    { name: "Middag", start: "14:00", end: "16:00", maxCapacity: 10 },
   ];
 
   // Groepeer reserveringen per periode
@@ -1350,25 +1354,94 @@ function generateFreeBusyPeriods(reservations) {
     }
   });
 
-  // Genereer periods voor elke tijdsperiode
-  for (const period of timePeriods) {
-    const periodReservations = reservationsByPeriod[period.name] || [];
+  // Als er een specifieke tijd is opgevraagd, toon alleen die shift met 30-minuten sloten
+  if (requestedTime) {
+    // Bepaal in welke periode de opgevraagde tijd valt
+    const targetPeriod = timePeriods.find(period => 
+      requestedTime >= period.start && requestedTime < period.end
+    );
 
-    if (periodReservations.length > 0) {
-      // Bezet tijdslot
-      periods.push({
-        type: "busy",
-        start_time: period.start,
-        end_time: period.end,
-        reservations: periodReservations,
+    if (targetPeriod) {
+      const periodReservations = reservationsByPeriod[targetPeriod.name] || [];
+      
+      // Genereer 30-minuten sloten binnen de target periode
+      const timeSlots = [];
+      const startTime = new Date(`2000-01-01T${targetPeriod.start}:00`);
+      const endTime = new Date(`2000-01-01T${targetPeriod.end}:00`);
+      
+      for (let time = new Date(startTime); time < endTime; time.setMinutes(time.getMinutes() + 30)) {
+        const timeString = time.toTimeString().slice(0, 5);
+        timeSlots.push(timeString);
+      }
+
+      // Groepeer reserveringen per 30-minuten slot
+      const reservationsBySlot = {};
+      periodReservations.forEach(reservation => {
+        const time = reservation.reservation_time;
+        const timeStr = time.slice(0, 5);
+        
+        // Bepaal in welk 30-minuten slot deze reservering valt
+        const timeDate = new Date(`2000-01-01T${timeStr}:00`);
+        const minutes = timeDate.getMinutes();
+        const slotStartMinutes = Math.floor(minutes / 30) * 30;
+        const slotStartTime = new Date(timeDate);
+        slotStartTime.setMinutes(slotStartMinutes);
+        const slotKey = slotStartTime.toTimeString().slice(0, 5);
+        
+        if (!reservationsBySlot[slotKey]) {
+          reservationsBySlot[slotKey] = [];
+        }
+        reservationsBySlot[slotKey].push(reservation);
       });
-    } else {
-      // Vrij tijdslot
-      periods.push({
-        type: "free",
-        start_time: period.start,
-        end_time: period.end,
-      });
+
+      // Genereer periods voor elk 30-minuten slot binnen de target periode
+      for (let i = 0; i < timeSlots.length - 1; i++) {
+        const currentTime = timeSlots[i];
+        const nextTime = timeSlots[i + 1];
+        
+        const slotReservations = reservationsBySlot[currentTime] || [];
+        
+        if (slotReservations.length > 0) {
+          periods.push({
+            type: "busy",
+            start_time: currentTime,
+            end_time: nextTime,
+            reservations: slotReservations,
+            period_name: targetPeriod.name,
+            max_capacity: targetPeriod.maxCapacity
+          });
+        } else {
+          periods.push({
+            type: "free",
+            start_time: currentTime,
+            end_time: nextTime,
+            period_name: targetPeriod.name,
+            max_capacity: targetPeriod.maxCapacity
+          });
+        }
+      }
+    }
+  } else {
+    // Genereer periods voor elke tijdsperiode (zoals voorheen)
+    for (const period of timePeriods) {
+      const periodReservations = reservationsByPeriod[period.name] || [];
+
+      if (periodReservations.length > 0) {
+        // Bezet tijdslot
+        periods.push({
+          type: "busy",
+          start_time: period.start,
+          end_time: period.end,
+          reservations: periodReservations,
+        });
+      } else {
+        // Vrij tijdslot
+        periods.push({
+          type: "free",
+          start_time: period.start,
+          end_time: period.end,
+        });
+      }
     }
   }
 
