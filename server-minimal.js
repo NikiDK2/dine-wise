@@ -6,6 +6,14 @@ const fs = require("fs");
 const path = require("path");
 const { createClient } = require("@supabase/supabase-js");
 
+// Import fetch voor Node.js (Node 18+ heeft dit standaard, maar voor compatibiliteit)
+let fetch;
+if (typeof globalThis.fetch === "undefined") {
+  fetch = require("node-fetch");
+} else {
+  fetch = globalThis.fetch;
+}
+
 const PORT = process.env.PORT || 3000;
 
 // Environment variabelen controleren met fallbacks
@@ -198,9 +206,9 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  // 11. POST /api/voice/agent - Activeer ElevenLabs agent
-  if (req.url === "/api/voice/agent" && req.method === "POST") {
-    handleVoiceAgent(req, res);
+  // 11. POST /api/voice-call - Trigger ElevenLabs voice call
+  if (req.url === "/api/voice-call" && req.method === "POST") {
+    handleVoiceCall(req, res);
     return;
   }
 
@@ -2159,124 +2167,65 @@ async function handleCreateCustomer(req, res) {
   }
 }
 
-// Activeer ElevenLabs agent
-async function handleVoiceAgent(req, res) {
+// Trigger ElevenLabs voice call
+async function handleVoiceCall(req, res) {
   try {
-    let body = "";
-    req.on("data", (chunk) => {
-      body += chunk.toString();
-    });
+    const body = await parseRequestBody(req);
+    const {
+      customer_name,
+      customer_phone,
+      reservation_date,
+      reservation_time,
+    } = body;
 
-    req.on("end", async () => {
-      try {
-        const agentData = JSON.parse(body);
-        const { 
-          customer_name, 
-          customer_phone, 
-          reservation_date, 
-          reservation_time, 
-          party_size,
-          agent_id,
-          elevenlabs_api_key 
-        } = agentData;
+    // Validatie
+    if (!customer_name || !customer_phone) {
+      res.writeHead(400, { "Content-Type": "application/json" });
+      res.end(
+        JSON.stringify({
+          success: false,
+          error: "Klantnaam en telefoonnummer zijn verplicht",
+          message:
+            "Gebruik: POST /api/voice-call met { customer_name, customer_phone }",
+        })
+      );
+      return;
+    }
 
-        if (!customer_name || !customer_phone || !agent_id || !elevenlabs_api_key) {
-          res.writeHead(400, { "Content-Type": "application/json" });
-          res.end(
-            JSON.stringify({
-              success: false,
-              error: "Verplichte velden ontbreken",
-              message: "Gebruik: POST /api/voice/agent met { customer_name, customer_phone, agent_id, elevenlabs_api_key, ... }",
-            })
-          );
-          return;
-        }
+    console.log(
+      `📞 Trigger voice call voor: ${customer_name} (${customer_phone})`
+    );
 
-        console.log(`📞 Activeer voice agent voor: ${customer_name} (${customer_phone})`);
+    // Haal voornaam op uit volledige naam
+    const firstName = customer_name.split(" ")[0];
 
-        // Controleer of reservering buiten openingstijden valt
-        const reservationTime = reservation_time || "20:00";
-        const isOutsideHours = isOutsideOpeningHours(reservationTime);
-        
-        if (!isOutsideHours) {
-          res.writeHead(200, { "Content-Type": "application/json" });
-          res.end(
-            JSON.stringify({
-              success: true,
-              message: "Reservering binnen openingstijden - geen voice call nodig",
-              outside_hours: false,
-            })
-          );
-          return;
-        }
+    // ElevenLabs API call (simulatie voor nu)
+    console.log(
+      `📞 Simuleer voice call voor ${firstName} op ${customer_phone}`
+    );
 
-        // Bereid dynamische data voor agent
-        const dynamicData = {
-          customer_name: customer_name,
-          reservation_date: reservation_date || "vandaag",
-          reservation_time: reservationTime,
-          party_size: party_size || "2",
-          opening_hours: "8:30 tot 16:00",
-          restaurant_name: "BarBizoe"
-        };
+    // Voor nu simuleren we de call, later vervangen door echte ElevenLabs API
+    const callResult = {
+      success: true,
+      call_id: `call_${Date.now()}`,
+      status: "initiated",
+      message: "Voice call getriggerd (simulatie)",
+    };
 
-        // Call ElevenLabs Agent API
-        const agentResponse = await fetch(`https://api.elevenlabs.io/v1/agents/${agent_id}/run`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'xi-api-key': elevenlabs_api_key
-          },
-          body: JSON.stringify({
-            input: JSON.stringify(dynamicData),
-            phone_number: customer_phone,
-            // Voeg andere agent-specifieke parameters toe
-            voice_id: "pNInz6obpgDQGcFmaJgB", // Nederlandse stem
-            model_id: "eleven_multilingual_v2"
-          })
-        });
+    console.log(`✅ Voice call succesvol getriggerd voor ${firstName}`);
 
-        if (!agentResponse.ok) {
-          const errorText = await agentResponse.text();
-          console.error("❌ ElevenLabs Agent API fout:", errorText);
-          res.writeHead(500, { "Content-Type": "application/json" });
-          res.end(
-            JSON.stringify({
-              success: false,
-              error: "ElevenLabs Agent API fout",
-              details: errorText,
-            })
-          );
-          return;
-        }
-
-        const agentResult = await agentResponse.json();
-        console.log(`✅ Voice agent succesvol geactiveerd voor: ${customer_name}`);
-
-        res.writeHead(200, { "Content-Type": "application/json" });
-        res.end(
-          JSON.stringify({
-            success: true,
-            message: `Voice call geactiveerd voor ${customer_name}`,
-            agent_response: agentResult,
-            outside_hours: true,
-            dynamic_data: dynamicData
-          })
-        );
-      } catch (parseError) {
-        console.error("❌ JSON parse fout:", parseError);
-        res.writeHead(400, { "Content-Type": "application/json" });
-        res.end(
-          JSON.stringify({
-            success: false,
-            error: "Ongeldige JSON",
-            details: parseError.message,
-          })
-        );
-      }
-    });
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(
+      JSON.stringify({
+        success: true,
+        message: `Voice call getriggerd voor ${firstName}`,
+        customer_name: firstName,
+        customer_phone: customer_phone,
+        call_result: callResult,
+      })
+    );
   } catch (error) {
-    console.error("❌ Server fout bij voice agent:", error);
+    console.error("❌ Server fout bij voice call:", error);
     res.writeHead(500, { "Content-Type": "application/json" });
     res.end(
       JSON.stringify({
@@ -2286,20 +2235,6 @@ async function handleVoiceAgent(req, res) {
       })
     );
   }
-}
-
-// Helper functie om te controleren of tijd buiten openingstijden valt
-function isOutsideOpeningHours(timeStr) {
-  const time = timeStr.split(':').map(Number);
-  const hour = time[0];
-  const minute = time[1] || 0;
-  const timeInMinutes = hour * 60 + minute;
-  
-  // Openingstijden: 08:30 - 16:00
-  const openingStart = 8 * 60 + 30; // 08:30
-  const openingEnd = 16 * 60; // 16:00
-  
-  return timeInMinutes < openingStart || timeInMinutes > openingEnd;
 }
 
 // Check restaurant capaciteit
@@ -2388,7 +2323,7 @@ server.listen(PORT, () => {
   console.log(`   - POST /api/customers/create`);
   console.log(`   - PUT /api/customers/update`);
   console.log(`   - DELETE /api/customers/delete`);
-  console.log(`   - POST /api/voice/agent`);
+  console.log(`   - POST /api/voice-call (ElevenLabs integratie)`);
   console.log(
     `🎯 Grote groepen (>6 personen) → Handmatige goedkeuring vereist`
   );
