@@ -77,6 +77,7 @@ export default function Guests() {
   }
   console.log("Debug - Edit modal open:", editModalOpen);
   console.log("Debug - Editing customer:", editingCustomer);
+  console.log("Debug - No customers variable used"); // Force cache refresh
 
   const recentCustomers = displayCustomers
     .filter((customer) => customer.last_visit)
