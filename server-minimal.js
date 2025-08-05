@@ -1613,18 +1613,22 @@ async function handleCustomerSearch(req, res) {
         JSON.stringify({
           success: false,
           error: "Naam parameter is verplicht",
-          message: "Gebruik: /api/customers/search?name=KLANTNAAM&restaurant_id=ID",
+          message:
+            "Gebruik: /api/customers/search?name=KLANTNAAM&restaurant_id=ID",
         })
       );
       return;
     }
 
-    console.log(`🔍 Zoeken naar klant: "${customerName}" in restaurant: ${restaurantId}`);
+    console.log(
+      `🔍 Zoeken naar klant: "${customerName}" in restaurant: ${restaurantId}`
+    );
 
     // Zoek klant in database (case-insensitive zoeken)
     const { data: customers, error } = await supabase
       .from("customers")
-      .select(`
+      .select(
+        `
         id,
         restaurant_id,
         name,
@@ -1657,7 +1661,8 @@ async function handleCustomerSearch(req, res) {
         bookings_number,
         created_at,
         updated_at
-      `)
+      `
+      )
       .eq("restaurant_id", restaurantId)
       .ilike("name", `%${customerName}%`);
 
@@ -1687,7 +1692,9 @@ async function handleCustomerSearch(req, res) {
       return;
     }
 
-    console.log(`✅ ${customers.length} klant(en) gevonden voor: "${customerName}"`);
+    console.log(
+      `✅ ${customers.length} klant(en) gevonden voor: "${customerName}"`
+    );
 
     res.writeHead(200, { "Content-Type": "application/json" });
     res.end(
