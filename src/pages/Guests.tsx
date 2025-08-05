@@ -32,6 +32,12 @@ export default function Guests() {
     customer.phone?.includes(searchTerm)
   );
 
+  // Debug logging
+  console.log('Debug - Customers:', customers.length);
+  console.log('Debug - Search term:', searchTerm);
+  console.log('Debug - Filtered customers:', filteredCustomers.length);
+  console.log('Debug - Selected restaurant:', selectedRestaurant?.id);
+
   const recentCustomers = customers
     .filter(customer => customer.last_visit)
     .sort((a, b) => new Date(b.last_visit!).getTime() - new Date(a.last_visit!).getTime())
