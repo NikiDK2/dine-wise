@@ -48,27 +48,25 @@ export default function Guests() {
   const { data: customers = [] } = useCustomers(selectedRestaurant?.id);
   const deleteAllCustomers = useDeleteAllCustomers();
 
-  const filteredCustomers = customers.filter(
-    (customer) =>
-      customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      customer.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      customer.phone?.includes(searchTerm)
-  );
-
   // Gebruik search API voor specifieke zoektermen
   const { data: searchResults = [] } = useSearchCustomers(
     selectedRestaurant?.id,
     searchTerm.length >= 2 ? searchTerm : undefined
   );
 
-  // Gebruik search API met lege term om alle klanten op te halen
-  const { data: allCustomers = [] } = useSearchCustomers(
-    selectedRestaurant?.id,
-    searchTerm.length < 2 ? "" : undefined
+  // Gebruik list API voor algemene weergave
+  const { data: allCustomers = [] } = useCustomers(selectedRestaurant?.id);
+
+  // Filter customers client-side voor algemene weergave
+  const filteredCustomers = allCustomers.filter(
+    (customer) =>
+      customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      customer.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      customer.phone?.includes(searchTerm)
   );
 
-  // Combineer normale customers met search results
-  const displayCustomers = searchTerm.length >= 2 ? searchResults : allCustomers;
+  // Combineer search results met filtered customers
+  const displayCustomers = searchTerm.length >= 2 ? searchResults : filteredCustomers;
 
   // Debug logging
   console.log("Debug - Restaurants:", restaurants.length);
