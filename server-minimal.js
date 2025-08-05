@@ -10,20 +10,29 @@ const PORT = process.env.PORT || 3000;
 
 // Environment variabelen controleren met fallbacks
 const RESTAURANT_ID = process.env.RESTAURANT_ID || "123";
-const supabaseUrl = process.env.VITE_SUPABASE_URL || "https://uhrwgjwgdgpgrzbdodgr.supabase.co";
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "sb_secret_KLpT35vdk51lib-LeKW8iw_splqhZW-";
+const supabaseUrl =
+  process.env.VITE_SUPABASE_URL || "https://uhrwgjwgdgpgrzbdodgr.supabase.co";
+const supabaseKey =
+  process.env.SUPABASE_SERVICE_ROLE_KEY ||
+  "sb_secret_KLpT35vdk51lib-LeKW8iw_splqhZW-";
 
 // Waarschuw voor ontbrekende environment variabelen maar crash niet
 if (!process.env.RESTAURANT_ID) {
-  console.warn("⚠️  RESTAURANT_ID environment variabele niet gevonden, gebruik fallback: 123");
+  console.warn(
+    "⚠️  RESTAURANT_ID environment variabele niet gevonden, gebruik fallback: 123"
+  );
 }
 
 if (!process.env.VITE_SUPABASE_URL) {
-  console.warn("⚠️  VITE_SUPABASE_URL environment variabele niet gevonden, gebruik fallback");
+  console.warn(
+    "⚠️  VITE_SUPABASE_URL environment variabele niet gevonden, gebruik fallback"
+  );
 }
 
 if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
-  console.warn("⚠️  SUPABASE_SERVICE_ROLE_KEY environment variabele niet gevonden, gebruik fallback");
+  console.warn(
+    "⚠️  SUPABASE_SERVICE_ROLE_KEY environment variabele niet gevonden, gebruik fallback"
+  );
 }
 
 // Supabase client configuratie
@@ -1133,7 +1142,7 @@ async function handleGetRestaurantCapacity(req, res) {
   try {
     // Haal restaurant ID uit query parameters
     const url = new URL(req.url, `http://${req.headers.host}`);
-    const restaurantId = url.searchParams.get('restaurant_id') || RESTAURANT_ID;
+    const restaurantId = url.searchParams.get("restaurant_id") || RESTAURANT_ID;
 
     // Haal alle tafels op van het restaurant
     const { data: tables, error: tablesError } = await supabase
