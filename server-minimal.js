@@ -641,7 +641,7 @@ async function handleCheckAvailability(req, res) {
       requestedTimeStr,
       settings
     );
-    
+
     // Haal alle reserveringen op voor het specifieke tijdstip (niet alleen overlappende)
     let allReservationsForTimeSlot = [];
     try {
@@ -713,16 +713,24 @@ async function handleCheckAvailability(req, res) {
     const isLargeGroup = party_size > largeGroupThreshold;
 
     // Debug logging
-    console.log(`🔍 Check-availability capaciteitscontrole voor ${requested_time}:`);
+    console.log(
+      `🔍 Check-availability capaciteitscontrole voor ${requested_time}:`
+    );
     console.log(`  - Tijdsspecifieke max: ${timeSpecificMaxForSlot}`);
     console.log(`  - Huidige totaal voor tijdslot: ${currentTotalForTimeSlot}`);
     console.log(`  - Nieuwe reservering: ${party_size}`);
-    console.log(`  - Totaal na reservering: ${currentTotalForTimeSlot + party_size}`);
-    console.log(`  - Limiet overschreden: ${
-      timeSpecificMaxForSlot &&
-      currentTotalForTimeSlot + party_size > timeSpecificMaxForSlot
-    }`);
-    console.log(`  - Aantal reserveringen voor dit tijdstip: ${allReservationsForTimeSlot.length}`);
+    console.log(
+      `  - Totaal na reservering: ${currentTotalForTimeSlot + party_size}`
+    );
+    console.log(
+      `  - Limiet overschreden: ${
+        timeSpecificMaxForSlot &&
+        currentTotalForTimeSlot + party_size > timeSpecificMaxForSlot
+      }`
+    );
+    console.log(
+      `  - Aantal reserveringen voor dit tijdstip: ${allReservationsForTimeSlot.length}`
+    );
 
     const isAvailable =
       availableCapacity >= party_size && !timeSpecificLimitExceeded;
@@ -1312,32 +1320,57 @@ async function handleDeleteReservation(req, res) {
 // Helper functie om free/busy periods te genereren
 function generateFreeBusyPeriods(reservations) {
   const periods = [];
-  const startTime = "17:00";
-  const endTime = "22:00";
-
-  // Voor nu: eenvoudige demo periods
-  // Later: echte logica gebaseerd op reserveringen
-  periods.push({
-    type: "free",
-    start_time: "17:00",
-    end_time: "18:30",
+  
+  // Restaurant openingstijden: 08:30 - 16:00
+  const openingTime = "08:30";
+  const closingTime = "16:00";
+  
+  // Groepeer reserveringen per tijdstip
+  const reservationsByTime = {};
+  reservations.forEach(reservation => {
+    const time = reservation.reservation_time;
+    if (!reservationsByTime[time]) {
+      reservationsByTime[time] = [];
+    }
+    reservationsByTime[time].push(reservation);
   });
-
-  if (reservations.length > 0) {
-    periods.push({
-      type: "busy",
-      start_time: "18:30",
-      end_time: "19:30",
-      reservations: reservations.slice(0, 3), // Toon eerste 3 reserveringen
-    });
+  
+  // Genereer tijdsloten van 30 minuten
+  const timeSlots = [];
+  const startTime = new Date(`2000-01-01T${openingTime}:00`);
+  const endTime = new Date(`2000-01-01T${closingTime}:00`);
+  
+  for (let time = new Date(startTime); time < endTime; time.setMinutes(time.getMinutes() + 30)) {
+    const timeString = time.toTimeString().slice(0, 5);
+    timeSlots.push(timeString);
   }
-
-  periods.push({
-    type: "free",
-    start_time: "19:30",
-    end_time: "22:00",
-  });
-
+  
+  // Genereer periods voor elk tijdslot
+  for (let i = 0; i < timeSlots.length - 1; i++) {
+    const currentTime = timeSlots[i];
+    const nextTime = timeSlots[i + 1];
+    
+    // Check of er reserveringen zijn voor dit tijdslot
+    const slotReservations = reservationsByTime[currentTime] || [];
+    
+    if (slotReservations.length > 0) {
+      // Bezet tijdslot
+      periods.push({
+        type: "busy",
+        start_time: currentTime,
+        end_time: nextTime,
+        reservations: slotReservations
+      });
+    } else {
+      // Vrij tijdslot
+      periods.push({
+        type: "free",
+        start_time: currentTime,
+        end_time: nextTime
+      });
+    }
+  }
+  
   return periods;
 }
 
