@@ -13,7 +13,7 @@ import {
 import { Header } from "@/components/layout/Header";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { useRestaurants } from "@/hooks/useRestaurants";
-import { useCustomers, useDeleteAllCustomers } from "@/hooks/useCustomers";
+import { useCustomers, useDeleteAllCustomers, useSearchCustomers } from "@/hooks/useCustomers";
 import { CreateCustomerModal } from "@/components/customers/CreateCustomerModal";
 import { EditCustomerModal } from "@/components/customers/EditCustomerModal";
 import { CsvImportModal } from "@/components/customers/CsvImportModal";
@@ -54,6 +54,15 @@ export default function Guests() {
       customer.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       customer.phone?.includes(searchTerm)
   );
+
+  // Gebruik search API voor specifieke zoektermen
+  const { data: searchResults = [] } = useSearchCustomers(
+    selectedRestaurant?.id,
+    searchTerm.length >= 2 ? searchTerm : undefined
+  );
+
+  // Combineer normale customers met search results
+  const displayCustomers = searchTerm.length >= 2 ? searchResults : filteredCustomers;
 
   // Debug logging
   console.log("Debug - Restaurants:", restaurants.length);
@@ -255,7 +264,7 @@ export default function Guests() {
 
               <TabsContent value="all" className="space-y-4">
                 <div className="grid gap-4">
-                  {filteredCustomers.map((customer) => (
+                  {displayCustomers.map((customer) => (
                     <Card key={customer.id}>
                       <CardContent className="p-6">
                         <div className="flex items-start justify-between">
@@ -350,7 +359,7 @@ export default function Guests() {
                     </Card>
                   ))}
 
-                  {filteredCustomers.length === 0 && (
+                  {displayCustomers.length === 0 && (
                     <Card>
                       <CardContent className="p-8 text-center">
                         <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
