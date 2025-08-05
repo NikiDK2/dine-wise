@@ -104,6 +104,60 @@ app.get("/api/agenda/calendar", (req, res) => {
   });
 });
 
+// Reservering API routes
+app.post("/api/reservations/book", async (req, res) => {
+  try {
+    const {
+      restaurant_id,
+      customer_name,
+      customer_email,
+      customer_phone,
+      reservation_date,
+      reservation_time,
+      party_size,
+      special_requests,
+    } = req.body;
+
+    if (!restaurant_id || !customer_name || !customer_email || !reservation_date || !reservation_time || !party_size) {
+      return res.status(400).json({
+        success: false,
+        error: "Alle verplichte velden moeten worden ingevuld",
+        details: "restaurant_id, customer_name, customer_email, reservation_date, reservation_time en party_size zijn verplicht",
+      });
+    }
+
+    // Simuleer een succesvolle reservering voor nu
+    const reservation = {
+      id: "test-" + Date.now(),
+      restaurant_id,
+      customer_name,
+      customer_email,
+      customer_phone: customer_phone || "",
+      reservation_date,
+      reservation_time,
+      party_size,
+      special_requests: special_requests || "",
+      status: "confirmed",
+      created_at: new Date().toISOString(),
+    };
+
+    res.json({
+      success: true,
+      booked: true,
+      reservation,
+      message: "Reservering succesvol aangemaakt (demo)",
+    });
+
+  } catch (error) {
+    console.error("Error in book reservation:", error);
+    res.status(500).json({
+      success: false,
+      error: "Er is een fout opgetreden bij het aanmaken van de reservering",
+      details: error.message,
+    });
+  }
+});
+
 // Serve React app voor alle andere routes
 app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "dist", "index.html"));
