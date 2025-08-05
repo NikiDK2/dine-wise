@@ -666,6 +666,9 @@ async function handleCheckAvailability(req, res) {
       return;
     }
 
+    // Check of dit een grote groep is (vereist handmatige goedkeuring)
+    const isLargeGroup = party_size > largeGroupThreshold;
+
     const isAvailable = availableCapacity >= party_size && !timeSpecificLimitExceeded;
 
     const alternativeTimes = generateAlternativeTimes(requested_time, dayHours);
