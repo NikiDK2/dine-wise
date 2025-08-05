@@ -22,7 +22,7 @@ export default function Guests() {
   const [editingCustomer, setEditingCustomer] = useState<any>(null);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const { data: restaurants = [] } = useRestaurants();
-  const selectedRestaurant = restaurants[0];
+  const selectedRestaurant = restaurants[0] || { id: "29edb315-eed1-481f-9251-c113e56dbdca" }; // Fallback restaurant ID
   const { data: customers = [] } = useCustomers(selectedRestaurant?.id);
   const deleteAllCustomers = useDeleteAllCustomers();
 
