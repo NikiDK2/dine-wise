@@ -57,13 +57,6 @@ export default defineConfig({
   // Optimaliseer development server
   server: {
     port: 8081,
-    proxy: {
-      '/api': {
-        target: 'http://localhost:3001',
-        changeOrigin: true,
-        secure: false,
-      },
-    },
   },
   // Tree shaking optimalisaties
   optimizeDeps: {
