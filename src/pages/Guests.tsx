@@ -61,8 +61,14 @@ export default function Guests() {
     searchTerm.length >= 2 ? searchTerm : undefined
   );
 
+  // Gebruik search API met lege term om alle klanten op te halen
+  const { data: allCustomers = [] } = useSearchCustomers(
+    selectedRestaurant?.id,
+    searchTerm.length < 2 ? "" : undefined
+  );
+
   // Combineer normale customers met search results
-  const displayCustomers = searchTerm.length >= 2 ? searchResults : filteredCustomers;
+  const displayCustomers = searchTerm.length >= 2 ? searchResults : allCustomers;
 
   // Debug logging
   console.log("Debug - Restaurants:", restaurants.length);
