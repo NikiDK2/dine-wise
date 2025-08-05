@@ -23,6 +23,8 @@ interface EditCustomerModalProps {
 export function EditCustomerModal({ customer, open, onOpenChange }: EditCustomerModalProps) {
   const [formData, setFormData] = useState({
     name: customer.name,
+    first_name: customer.first_name || '',
+    last_name: customer.last_name || '',
     email: customer.email || '',
     phone: customer.phone || '',
     notes: customer.notes || '',
@@ -41,9 +43,15 @@ export function EditCustomerModal({ customer, open, onOpenChange }: EditCustomer
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Zorg ervoor dat de volledige naam correct wordt samengesteld
+    const fullName = `${formData.first_name} ${formData.last_name}`.trim();
+    
     await updateCustomer.mutateAsync({
       id: customer.id,
-      updates: formData,
+      updates: {
+        ...formData,
+        name: fullName,
+      },
     });
     
     onOpenChange(false);
@@ -61,13 +69,31 @@ export function EditCustomerModal({ customer, open, onOpenChange }: EditCustomer
         
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Basic Information */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Naam *</Label>
+              <Label htmlFor="first_name">Voornaam *</Label>
               <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                id="first_name"
+                value={formData.first_name}
+                onChange={(e) => setFormData(prev => ({ 
+                  ...prev, 
+                  first_name: e.target.value,
+                  name: `${e.target.value} ${prev.last_name}`.trim()
+                }))}
+                required
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="last_name">Achternaam *</Label>
+              <Input
+                id="last_name"
+                value={formData.last_name}
+                onChange={(e) => setFormData(prev => ({ 
+                  ...prev, 
+                  last_name: e.target.value,
+                  name: `${prev.first_name} ${e.target.value}`.trim()
+                }))}
                 required
               />
             </div>
