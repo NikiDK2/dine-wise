@@ -443,8 +443,8 @@ async function handleCheckAvailability(req, res) {
     const openingHours = restaurant.opening_hours || {};
     const dayHours = openingHours[dayOfWeek];
 
-    // Check of restaurant gesloten is op deze dag
-    if (!dayHours || dayHours.closed || !dayHours.open || !dayHours.close) {
+    // Check of restaurant gesloten is op deze dag (nieuw formaat)
+    if (!dayHours || !dayHours.isOpen) {
       const dayName = requestedDate.toLocaleDateString("nl-NL", { weekday: "long" });
       res.writeHead(400, { "Content-Type": "application/json" });
       res.end(
@@ -459,16 +459,29 @@ async function handleCheckAvailability(req, res) {
       return;
     }
 
-    // Check of tijdstip binnen openingstijden valt
+    // Check of tijdstip binnen openingstijden valt (nieuw formaat met timeSlots)
     const requestedTimeStr = requested_time;
-    if (requestedTimeStr < dayHours.open || requestedTimeStr > dayHours.close) {
+    const timeSlots = dayHours.timeSlots || [];
+    let isWithinOpeningHours = false;
+    let applicableTimeSlot = null;
+
+    for (const slot of timeSlots) {
+      if (requestedTimeStr >= slot.openTime && requestedTimeStr <= slot.closeTime) {
+        isWithinOpeningHours = true;
+        applicableTimeSlot = slot;
+        break;
+      }
+    }
+
+    if (!isWithinOpeningHours) {
       const dayName = requestedDate.toLocaleDateString("nl-NL", { weekday: "long" });
+      const timeSlotsText = timeSlots.map(slot => `${slot.openTime}-${slot.closeTime}`).join(", ");
       res.writeHead(400, { "Content-Type": "application/json" });
       res.end(
         JSON.stringify({
           success: false,
           error: "Buiten openingstijden",
-          details: `Restaurant is open van ${dayHours.open} tot ${dayHours.close} op ${dayName}. Uw gewenste tijdstip ${requestedTimeStr} valt buiten deze openingstijden.`,
+          details: `Restaurant is open op ${dayName} van ${timeSlotsText}. Uw gewenste tijdstip ${requestedTimeStr} valt buiten deze openingstijden.`,
           requested_time: requestedTimeStr,
           opening_hours: dayHours,
           day_of_week: dayName,
