@@ -192,6 +192,12 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // 10. POST /api/customers/create - Maak nieuwe klant aan
+  if (req.url === "/api/customers/create" && req.method === "POST") {
+    handleCreateCustomer(req, res);
+    return;
+  }
+
   // Serve static files
   let filePath = req.url;
   if (filePath === "/" || filePath === "") {
@@ -1987,7 +1993,9 @@ async function handleListCustomers(req, res) {
       return;
     }
 
-    console.log(`✅ ${customers.length} klant(en) opgehaald voor restaurant: ${restaurantId}`);
+    console.log(
+      `✅ ${customers.length} klant(en) opgehaald voor restaurant: ${restaurantId}`
+    );
 
     res.writeHead(200, { "Content-Type": "application/json" });
     res.end(
@@ -2001,6 +2009,120 @@ async function handleListCustomers(req, res) {
     );
   } catch (error) {
     console.error("❌ Server fout bij ophalen klanten:", error);
+    res.writeHead(500, { "Content-Type": "application/json" });
+    res.end(
+      JSON.stringify({
+        success: false,
+        error: "Server fout",
+        details: error.message,
+      })
+    );
+  }
+}
+
+// Maak nieuwe klant aan
+async function handleCreateCustomer(req, res) {
+  try {
+    let body = "";
+    req.on("data", (chunk) => {
+      body += chunk.toString();
+    });
+
+    req.on("end", async () => {
+      try {
+        const customerData = JSON.parse(body);
+        const { restaurant_id, name, email, phone, first_name, last_name, address, city, zip, country, birthdate, company, language, guest_status, allergies, preferences, notes } = customerData;
+
+        if (!restaurant_id || !name) {
+          res.writeHead(400, { "Content-Type": "application/json" });
+          res.end(
+            JSON.stringify({
+              success: false,
+              error: "Restaurant ID en naam zijn verplicht",
+              message: "Gebruik: POST /api/customers/create met { restaurant_id, name, ... }",
+            })
+          );
+          return;
+        }
+
+        console.log(`➕ Maak nieuwe klant aan: ${name}`);
+
+        // Voeg nieuwe klant toe aan database
+        const { data: newCustomer, error } = await supabase
+          .from("customers")
+          .insert([
+            {
+              restaurant_id,
+              name,
+              email: email || null,
+              phone: phone || null,
+              professional_email: null,
+              professional_phone: null,
+              first_name: first_name || null,
+              last_name: last_name || null,
+              address: address || null,
+              city: city || null,
+              zip: zip || null,
+              country: country || "be",
+              birthdate: birthdate || null,
+              company: company || null,
+              language: language || "nl",
+              guest_status: guest_status || "Normal",
+              email_optin_marketing: false,
+              sms_optin_marketing: false,
+              email_optin_reviews: false,
+              sms_optin_reviews: false,
+              has_no_show: false,
+              is_blacklisted: false,
+              allergies: allergies || null,
+              allergies_tags: null,
+              preferences: preferences || null,
+              notes: notes || null,
+              total_visits: 0,
+              last_visit: null,
+              bookings_number: 0,
+            },
+          ])
+          .select()
+          .single();
+
+        if (error) {
+          console.error("❌ Fout bij aanmaken klant:", error);
+          res.writeHead(500, { "Content-Type": "application/json" });
+          res.end(
+            JSON.stringify({
+              success: false,
+              error: "Database fout",
+              details: error.message,
+            })
+          );
+          return;
+        }
+
+        console.log(`✅ Klant succesvol aangemaakt: ${newCustomer.name}`);
+
+        res.writeHead(201, { "Content-Type": "application/json" });
+        res.end(
+          JSON.stringify({
+            success: true,
+            message: `Klant "${newCustomer.name}" succesvol aangemaakt`,
+            customer: newCustomer,
+          })
+        );
+      } catch (parseError) {
+        console.error("❌ JSON parse fout:", parseError);
+        res.writeHead(400, { "Content-Type": "application/json" });
+        res.end(
+          JSON.stringify({
+            success: false,
+            error: "Ongeldige JSON",
+            details: parseError.message,
+          })
+        );
+      }
+    });
+  } catch (error) {
+    console.error("❌ Server fout bij aanmaken klant:", error);
     res.writeHead(500, { "Content-Type": "application/json" });
     res.end(
       JSON.stringify({
@@ -2095,6 +2217,7 @@ server.listen(PORT, () => {
   console.log(`   - GET /api/restaurant/capacity`);
   console.log(`   - GET /api/customers/search`);
   console.log(`   - GET /api/customers/list`);
+  console.log(`   - POST /api/customers/create`);
   console.log(`   - PUT /api/customers/update`);
   console.log(`   - DELETE /api/customers/delete`);
   console.log(
