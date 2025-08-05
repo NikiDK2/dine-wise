@@ -13,7 +13,11 @@ import {
 import { Header } from "@/components/layout/Header";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { useRestaurants } from "@/hooks/useRestaurants";
-import { useCustomers, useDeleteAllCustomers, useSearchCustomers } from "@/hooks/useCustomers";
+import {
+  useCustomers,
+  useDeleteAllCustomers,
+  useSearchCustomers,
+} from "@/hooks/useCustomers";
 import { CreateCustomerModal } from "@/components/customers/CreateCustomerModal";
 import { EditCustomerModal } from "@/components/customers/EditCustomerModal";
 import { CsvImportModal } from "@/components/customers/CsvImportModal";
@@ -45,7 +49,6 @@ export default function Guests() {
   const selectedRestaurant = restaurants[0] || {
     id: "29edb315-eed1-481f-9251-c113e56dbdca",
   }; // Fallback restaurant ID
-  const { data: customers = [] } = useCustomers(selectedRestaurant?.id);
   const deleteAllCustomers = useDeleteAllCustomers();
 
   // Gebruik search API voor alle zoektermen (inclusief lege zoekterm)
@@ -66,16 +69,17 @@ export default function Guests() {
   // Debug logging
   console.log("Debug - Restaurants:", restaurants.length);
   console.log("Debug - Selected restaurant:", selectedRestaurant);
-  console.log("Debug - Customers:", customers.length);
   console.log("Debug - Search term:", searchTerm);
-  console.log("Debug - Filtered customers:", filteredCustomers.length);
-  if (customers.length > 0) {
-    console.log("Debug - First customer:", customers[0]);
+  console.log("Debug - Display customers:", displayCustomers.length);
+  console.log("Debug - Search results:", searchResults.length);
+  console.log("Debug - All customers:", allCustomers.length);
+  if (displayCustomers.length > 0) {
+    console.log("Debug - First customer:", displayCustomers[0]);
   }
   console.log("Debug - Edit modal open:", editModalOpen);
   console.log("Debug - Editing customer:", editingCustomer);
 
-  const recentCustomers = customers
+  const recentCustomers = displayCustomers
     .filter((customer) => customer.last_visit)
     .sort(
       (a, b) =>
@@ -83,7 +87,7 @@ export default function Guests() {
     )
     .slice(0, 10);
 
-  const frequentCustomers = customers
+  const frequentCustomers = displayCustomers
     .filter((customer) => customer.total_visits > 0)
     .sort((a, b) => b.total_visits - a.total_visits)
     .slice(0, 10);
@@ -207,7 +211,7 @@ export default function Guests() {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">
-                    {customers.filter((c) => c.total_visits > 1).length}
+                    {displayCustomers.filter((c) => c.total_visits > 1).length}
                   </div>
                 </CardContent>
               </Card>
@@ -221,12 +225,12 @@ export default function Guests() {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">
-                    {customers.length > 0
+                    {displayCustomers.length > 0
                       ? (
-                          customers.reduce(
+                          displayCustomers.reduce(
                             (sum, c) => sum + c.total_visits,
                             0
-                          ) / customers.length
+                          ) / displayCustomers.length
                         ).toFixed(1)
                       : "0"}
                   </div>
@@ -238,7 +242,7 @@ export default function Guests() {
               <div className="flex items-center justify-between">
                 <TabsList>
                   <TabsTrigger value="all">
-                    Alle Gasten ({customers.length})
+                    Alle Gasten ({displayCustomers.length})
                   </TabsTrigger>
                   <TabsTrigger value="recent">
                     Recent Bezocht ({recentCustomers.length})
