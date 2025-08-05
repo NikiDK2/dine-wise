@@ -126,7 +126,7 @@ export default function Guests() {
                       <Button
                         variant="destructive"
                         size="sm"
-                        disabled={customers.length === 0}
+                        disabled={displayCustomers.length === 0}
                       >
                         <Trash2 className="h-4 w-4 mr-2" />
                         Alle Gasten Verwijderen

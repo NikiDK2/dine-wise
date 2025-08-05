@@ -76,14 +76,14 @@ export function useSearchCustomers(restaurantId?: string, searchTerm?: string) {
   return useQuery({
     queryKey: ['customers-search', restaurantId, searchTerm, user?.id],
     queryFn: async () => {
-      if (!user || !restaurantId || !searchTerm || searchTerm.length < 2) {
+      if (!user || !restaurantId) {
         return [];
       }
       
-      console.log('🔍 useSearchCustomers - Searching for:', searchTerm);
+      console.log('🔍 useSearchCustomers - Searching for:', searchTerm || '(empty - all customers)');
       
       // Gebruik de nieuwe API endpoint
-      const response = await fetch(`/api/customers/search?name=${encodeURIComponent(searchTerm)}&restaurant_id=${restaurantId}`);
+      const response = await fetch(`/api/customers/search?name=${encodeURIComponent(searchTerm || '')}&restaurant_id=${restaurantId}`);
       const result = await response.json();
       
       console.log('🔍 useSearchCustomers - API response:', result);
@@ -96,7 +96,7 @@ export function useSearchCustomers(restaurantId?: string, searchTerm?: string) {
       
       return result.customers as Customer[];
     },
-    enabled: !!user && !!restaurantId && !!searchTerm && searchTerm.length >= 2,
+    enabled: !!user && !!restaurantId,
   });
 }
 
