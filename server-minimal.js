@@ -1325,11 +1325,11 @@ function generateFreeBusyPeriods(reservations) {
   const openingTime = "08:30";
   const closingTime = "16:00";
 
-  // Definieer grotere tijdsperiodes
+  // Definieer tijdsperiodes waar reserveringen verplicht zijn (gebaseerd op capaciteitsinstellingen)
   const timePeriods = [
-    { name: "Ochtend", start: "08:30", end: "10:30" },
-    { name: "Middag", start: "10:30", end: "15:30" },
-    { name: "Late middag", start: "15:30", end: "16:00" }
+    { name: "Ochtend", start: "08:30", end: "12:00", maxCapacity: 12 },
+    { name: "Lunch", start: "12:00", end: "14:00", maxCapacity: 15 },
+    { name: "Middag", start: "14:00", end: "16:00", maxCapacity: 10 }
   ];
 
   // Groepeer reserveringen per periode
