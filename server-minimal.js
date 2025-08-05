@@ -1992,7 +1992,8 @@ async function handleListCustomers(req, res) {
       `
       )
       .eq("restaurant_id", restaurantId)
-      .order("name", { ascending: true });
+      .order("name", { ascending: true })
+      .limit(10000); // Verhoog limiet naar 10.000 records
 
     if (error) {
       console.error("❌ Fout bij ophalen klanten:", error);
