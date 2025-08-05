@@ -50,13 +50,19 @@ export function useCustomers(restaurantId?: string) {
     queryFn: async () => {
       if (!user || !restaurantId) throw new Error('Missing required parameters');
       
+      console.log('🔍 useCustomers - Fetching customers for restaurant:', restaurantId);
+      
       // Gebruik de nieuwe API endpoint
       const response = await fetch(`/api/customers/list?restaurant_id=${restaurantId}`);
       const result = await response.json();
       
+      console.log('🔍 useCustomers - API response:', result);
+      
       if (!result.success) {
         throw new Error(result.error || 'Failed to fetch customers');
       }
+      
+      console.log('🔍 useCustomers - Returning customers:', result.customers?.length || 0);
       
       return result.customers as Customer[];
     },
