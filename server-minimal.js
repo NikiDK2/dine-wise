@@ -186,6 +186,12 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // 9. GET /api/customers/list - Haal alle klanten op
+  if (req.url.startsWith("/api/customers/list") && req.method === "GET") {
+    handleListCustomers(req, res);
+    return;
+  }
+
   // Serve static files
   let filePath = req.url;
   if (filePath === "/" || filePath === "") {
@@ -1752,7 +1758,8 @@ async function handleUpdateCustomer(req, res) {
             JSON.stringify({
               success: false,
               error: "Klant ID is verplicht",
-              message: "Gebruik: PUT /api/customers/update met { id: 'KLANT_ID', ...updates }",
+              message:
+                "Gebruik: PUT /api/customers/update met { id: 'KLANT_ID', ...updates }",
             })
           );
           return;
@@ -1834,7 +1841,8 @@ async function handleDeleteCustomer(req, res) {
             JSON.stringify({
               success: false,
               error: "Klant ID is verplicht",
-              message: "Gebruik: DELETE /api/customers/delete met { id: 'KLANT_ID' }",
+              message:
+                "Gebruik: DELETE /api/customers/delete met { id: 'KLANT_ID' }",
             })
           );
           return;
@@ -1904,6 +1912,95 @@ async function handleDeleteCustomer(req, res) {
     });
   } catch (error) {
     console.error("❌ Server fout bij verwijderen klant:", error);
+    res.writeHead(500, { "Content-Type": "application/json" });
+    res.end(
+      JSON.stringify({
+        success: false,
+        error: "Server fout",
+        details: error.message,
+      })
+    );
+  }
+}
+
+// Haal alle klanten op
+async function handleListCustomers(req, res) {
+  try {
+    // Haal parameters uit URL
+    const url = new URL(req.url, `http://${req.headers.host}`);
+    const restaurantId = url.searchParams.get("restaurant_id") || RESTAURANT_ID;
+
+    console.log(`📋 Ophalen van alle klanten voor restaurant: ${restaurantId}`);
+
+    // Haal alle klanten op uit database
+    const { data: customers, error } = await supabase
+      .from("customers")
+      .select(
+        `
+        id,
+        restaurant_id,
+        name,
+        email,
+        phone,
+        professional_email,
+        professional_phone,
+        first_name,
+        last_name,
+        address,
+        city,
+        zip,
+        country,
+        birthdate,
+        company,
+        language,
+        guest_status,
+        email_optin_marketing,
+        sms_optin_marketing,
+        email_optin_reviews,
+        sms_optin_reviews,
+        has_no_show,
+        is_blacklisted,
+        allergies,
+        allergies_tags,
+        preferences,
+        notes,
+        total_visits,
+        last_visit,
+        bookings_number,
+        created_at,
+        updated_at
+      `
+      )
+      .eq("restaurant_id", restaurantId)
+      .order("name", { ascending: true });
+
+    if (error) {
+      console.error("❌ Fout bij ophalen klanten:", error);
+      res.writeHead(500, { "Content-Type": "application/json" });
+      res.end(
+        JSON.stringify({
+          success: false,
+          error: "Database fout",
+          details: error.message,
+        })
+      );
+      return;
+    }
+
+    console.log(`✅ ${customers.length} klant(en) opgehaald voor restaurant: ${restaurantId}`);
+
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(
+      JSON.stringify({
+        success: true,
+        message: `${customers.length} klant(en) opgehaald`,
+        customers: customers,
+        total_found: customers.length,
+        restaurant_id: restaurantId,
+      })
+    );
+  } catch (error) {
+    console.error("❌ Server fout bij ophalen klanten:", error);
     res.writeHead(500, { "Content-Type": "application/json" });
     res.end(
       JSON.stringify({
@@ -1997,6 +2094,7 @@ server.listen(PORT, () => {
   console.log(`   - DELETE /api/reservations/delete`);
   console.log(`   - GET /api/restaurant/capacity`);
   console.log(`   - GET /api/customers/search`);
+  console.log(`   - GET /api/customers/list`);
   console.log(`   - PUT /api/customers/update`);
   console.log(`   - DELETE /api/customers/delete`);
   console.log(

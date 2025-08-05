@@ -50,14 +50,15 @@ export function useCustomers(restaurantId?: string) {
     queryFn: async () => {
       if (!user || !restaurantId) throw new Error('Missing required parameters');
       
-      const { data, error } = await supabase
-        .from('customers')
-        .select('*')
-        .eq('restaurant_id', restaurantId)
-        .order('created_at', { ascending: false });
+      // Gebruik de nieuwe API endpoint
+      const response = await fetch(`/api/customers/list?restaurant_id=${restaurantId}`);
+      const result = await response.json();
       
-      if (error) throw error;
-      return data as Customer[];
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to fetch customers');
+      }
+      
+      return result.customers as Customer[];
     },
     enabled: !!user && !!restaurantId,
   });
