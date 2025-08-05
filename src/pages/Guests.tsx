@@ -33,10 +33,14 @@ export default function Guests() {
   );
 
   // Debug logging
+  console.log('Debug - Restaurants:', restaurants.length);
+  console.log('Debug - Selected restaurant:', selectedRestaurant);
   console.log('Debug - Customers:', customers.length);
   console.log('Debug - Search term:', searchTerm);
   console.log('Debug - Filtered customers:', filteredCustomers.length);
-  console.log('Debug - Selected restaurant:', selectedRestaurant?.id);
+  if (customers.length > 0) {
+    console.log('Debug - First customer:', customers[0]);
+  }
 
   const recentCustomers = customers
     .filter(customer => customer.last_visit)
