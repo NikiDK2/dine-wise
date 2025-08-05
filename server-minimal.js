@@ -1325,14 +1325,24 @@ function generateFreeBusyPeriods(reservations) {
   const openingTime = "08:30";
   const closingTime = "16:00";
   
-  // Groepeer reserveringen per tijdstip
-  const reservationsByTime = {};
+  // Groepeer reserveringen per tijdslot (30 minuten)
+  const reservationsBySlot = {};
   reservations.forEach(reservation => {
     const time = reservation.reservation_time;
-    if (!reservationsByTime[time]) {
-      reservationsByTime[time] = [];
+    const timeStr = time.slice(0, 5); // Neem alleen HH:MM
+    
+    // Bepaal in welk 30-minuten slot deze reservering valt
+    const timeDate = new Date(`2000-01-01T${timeStr}:00`);
+    const minutes = timeDate.getMinutes();
+    const slotStartMinutes = Math.floor(minutes / 30) * 30;
+    const slotStartTime = new Date(timeDate);
+    slotStartTime.setMinutes(slotStartMinutes);
+    const slotKey = slotStartTime.toTimeString().slice(0, 5);
+    
+    if (!reservationsBySlot[slotKey]) {
+      reservationsBySlot[slotKey] = [];
     }
-    reservationsByTime[time].push(reservation);
+    reservationsBySlot[slotKey].push(reservation);
   });
   
   // Genereer tijdsloten van 30 minuten
@@ -1351,7 +1361,7 @@ function generateFreeBusyPeriods(reservations) {
     const nextTime = timeSlots[i + 1];
     
     // Check of er reserveringen zijn voor dit tijdslot
-    const slotReservations = reservationsByTime[currentTime] || [];
+    const slotReservations = reservationsBySlot[currentTime] || [];
     
     if (slotReservations.length > 0) {
       // Bezet tijdslot
