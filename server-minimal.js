@@ -168,6 +168,12 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // 6. GET /api/customers/search - Zoek klantgegevens op naam
+  if (req.url.startsWith("/api/customers/search") && req.method === "GET") {
+    handleCustomerSearch(req, res);
+    return;
+  }
+
   // Serve static files
   let filePath = req.url;
   if (filePath === "/" || filePath === "") {
@@ -1398,16 +1404,16 @@ function generateFreeBusyPeriods(reservations, requestedTime = null) {
         reservationsBySlot[slotKey].push(reservation);
       });
 
-            // Genereer periods voor elk 30-minuten slot binnen de target periode
+      // Genereer periods voor elk 30-minuten slot binnen de target periode
       let currentFreeStart = null;
       let currentFreeEnd = null;
-      
+
       for (let i = 0; i < timeSlots.length - 1; i++) {
         const currentTime = timeSlots[i];
         const nextTime = timeSlots[i + 1];
-        
+
         const slotReservations = reservationsBySlot[currentTime] || [];
-        
+
         if (slotReservations.length > 0) {
           // Als er reserveringen zijn, voeg eerst de huidige vrije periode toe (als die bestaat)
           if (currentFreeStart !== null) {
@@ -1421,7 +1427,7 @@ function generateFreeBusyPeriods(reservations, requestedTime = null) {
             currentFreeStart = null;
             currentFreeEnd = null;
           }
-          
+
           // Voeg bezet tijdslot toe
           periods.push({
             type: "busy",
@@ -1439,7 +1445,7 @@ function generateFreeBusyPeriods(reservations, requestedTime = null) {
           currentFreeEnd = nextTime;
         }
       }
-      
+
       // Voeg de laatste vrije periode toe (als die bestaat)
       if (currentFreeStart !== null) {
         periods.push({
@@ -1593,6 +1599,120 @@ function getTimeSlot(requestedTimeStr) {
   return foundSlot ? foundSlot.name : "Onbekend";
 }
 
+// Zoek klantgegevens op naam
+async function handleCustomerSearch(req, res) {
+  try {
+    // Haal parameters uit URL
+    const url = new URL(req.url, `http://${req.headers.host}`);
+    const customerName = url.searchParams.get("name");
+    const restaurantId = url.searchParams.get("restaurant_id") || RESTAURANT_ID;
+
+    if (!customerName) {
+      res.writeHead(400, { "Content-Type": "application/json" });
+      res.end(
+        JSON.stringify({
+          success: false,
+          error: "Naam parameter is verplicht",
+          message: "Gebruik: /api/customers/search?name=KLANTNAAM&restaurant_id=ID",
+        })
+      );
+      return;
+    }
+
+    console.log(`🔍 Zoeken naar klant: "${customerName}" in restaurant: ${restaurantId}`);
+
+    // Zoek klant in database (case-insensitive zoeken)
+    const { data: customers, error } = await supabase
+      .from("customers")
+      .select(`
+        id,
+        restaurant_id,
+        name,
+        email,
+        phone,
+        professional_email,
+        professional_phone,
+        first_name,
+        last_name,
+        address,
+        city,
+        zip,
+        country,
+        birthdate,
+        company,
+        language,
+        guest_status,
+        email_optin_marketing,
+        sms_optin_marketing,
+        email_optin_reviews,
+        sms_optin_reviews,
+        has_no_show,
+        is_blacklisted,
+        allergies,
+        allergies_tags,
+        preferences,
+        notes,
+        total_visits,
+        last_visit,
+        bookings_number,
+        created_at,
+        updated_at
+      `)
+      .eq("restaurant_id", restaurantId)
+      .ilike("name", `%${customerName}%`);
+
+    if (error) {
+      console.error("Supabase error bij klant zoeken:", error);
+      res.writeHead(500, { "Content-Type": "application/json" });
+      res.end(
+        JSON.stringify({
+          success: false,
+          error: "Database fout",
+          details: error.message,
+        })
+      );
+      return;
+    }
+
+    if (!customers || customers.length === 0) {
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(
+        JSON.stringify({
+          success: true,
+          message: `Geen klanten gevonden met naam: "${customerName}"`,
+          customers: [],
+          total_found: 0,
+        })
+      );
+      return;
+    }
+
+    console.log(`✅ ${customers.length} klant(en) gevonden voor: "${customerName}"`);
+
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(
+      JSON.stringify({
+        success: true,
+        message: `${customers.length} klant(en) gevonden voor: "${customerName}"`,
+        customers: customers,
+        total_found: customers.length,
+        search_term: customerName,
+        restaurant_id: restaurantId,
+      })
+    );
+  } catch (error) {
+    console.error("Error in customer search:", error);
+    res.writeHead(500, { "Content-Type": "application/json" });
+    res.end(
+      JSON.stringify({
+        success: false,
+        error: "Server fout",
+        details: error.message,
+      })
+    );
+  }
+}
+
 // Check restaurant capaciteit
 async function handleGetRestaurantCapacity(req, res) {
   try {
@@ -1674,6 +1794,7 @@ server.listen(PORT, () => {
   console.log(`   - PUT /api/reservations/update`);
   console.log(`   - DELETE /api/reservations/delete`);
   console.log(`   - GET /api/restaurant/capacity`);
+  console.log(`   - GET /api/customers/search`);
   console.log(
     `🎯 Grote groepen (>6 personen) → Handmatige goedkeuring vereist`
   );
