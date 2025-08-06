@@ -139,3 +139,4 @@ Voor vragen of problemen, neem contact op via GitHub Issues.
 ---
 
 **RestoPlanner2** - Modern restaurant management voor de 21e eeuw 🍽️
+# Voice agent cleanup complete
