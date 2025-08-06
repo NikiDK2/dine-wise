@@ -545,7 +545,7 @@ async function handleCheckAvailability(req, res) {
     }
 
     // Check of dit een grote groep is (vereist handmatige goedkeuring)
-    const isLargeGroup = party_size > largeGroupThreshold;
+    const isLargeGroupCheck = party_size > largeGroupThreshold;
 
     // 4. Haal totale restaurant capaciteit op
     let tables = [];
@@ -699,8 +699,8 @@ async function handleCheckAvailability(req, res) {
           reservation_duration_minutes: reservationDuration,
           large_group_threshold: largeGroupThreshold,
         },
-        is_large_group: isLargeGroup,
-        large_group_warning: isLargeGroup
+        is_large_group: isLargeGroupCheck,
+        large_group_warning: isLargeGroupCheck
           ? "Voor groepen van meer dan 6 personen sturen wij uw aanvraag door naar het restaurant. U ontvangt binnen 24 uur een bevestiging."
           : null,
         total_restaurant_capacity: totalCapacity,
@@ -711,7 +711,7 @@ async function handleCheckAvailability(req, res) {
         unavailability_reason: unavailabilityReason,
         message: isAvailable
           ? `Tijdstip ${requested_time} is beschikbaar voor ${party_size} personen (${availableCapacity}/${totalCapacity} capaciteit vrij)${
-              isLargeGroup ? " - Handmatige goedkeuring vereist" : ""
+              isLargeGroupCheck ? " - Handmatige goedkeuring vereist" : ""
             }`
           : `Tijdstip ${requested_time} is niet beschikbaar voor ${party_size} personen: ${unavailabilityReason}`,
       })
@@ -884,7 +884,7 @@ async function handleBookReservation(req, res) {
     }
 
     // Check of dit een grote groep is (vereist handmatige goedkeuring)
-    const isLargeGroup = party_size > largeGroupThreshold;
+    const isLargeGroupBook = party_size > largeGroupThreshold;
 
     // 4. Haal totale restaurant capaciteit op
     let tables = [];
@@ -1042,7 +1042,7 @@ async function handleBookReservation(req, res) {
     console.log(`  - Aantal reserveringen voor dit tijdstip: ${allReservationsForTimeSlot.length}`);
 
     // Check of dit een grote groep is (vereist handmatige goedkeuring)
-    const isLargeGroup = party_size > largeGroupThreshold;
+    const isLargeGroupFinal = party_size > largeGroupThreshold;
 
     // 8. Check max reserveringen per slot
     if (overlappingReservations.length >= maxReservationsPerSlot) {
@@ -1067,7 +1067,7 @@ async function handleBookReservation(req, res) {
       );
       return;
     }
-    const reservationStatus = isLargeGroup ? "pending" : "confirmed";
+    const reservationStatus = isLargeGroupFinal ? "pending" : "confirmed";
 
     // 4. Maak de reservering aan
     const { data: newReservation, error } = await supabase
@@ -1105,11 +1105,11 @@ async function handleBookReservation(req, res) {
         success: true,
         booked: true,
         reservation: newReservation,
-        is_large_group: isLargeGroup,
-        large_group_warning: isLargeGroup
+        is_large_group: isLargeGroupFinal,
+        large_group_warning: isLargeGroupFinal
           ? "Voor groepen van meer dan 6 personen sturen wij uw aanvraag door naar het restaurant. U ontvangt binnen 24 uur een bevestiging."
           : null,
-        message: isLargeGroup
+        message: isLargeGroupFinal
           ? `Reservering voor ${customer_name} is aangemaakt en wacht op handmatige goedkeuring (24 uur)`
           : `Reservering succesvol aangemaakt voor ${customer_name} (echte database)`,
       })
