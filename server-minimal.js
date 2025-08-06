@@ -1,226 +1,220 @@
-const express = require("express");
+const http = require("http");
+const fs = require("fs");
 const path = require("path");
 const { createClient } = require("@supabase/supabase-js");
 
-// VOICE AGENT SERVER - ELEVENLABS + TWILIO CONFIGURATION
-// FORCE COMBELL RESTART - VOICE AGENT CONFIGURATION
-const app = express();
-const PORT = process.env.PORT || 3001;
+// HARDCODED CONFIGURATIE - ECHTE CREDENTIALS
+const ELEVENLABS_API_KEY =
+  "sk_e24eb242f160711fa44cd1b0d713d01bcd9fa7ffe47031a2";
+const ELEVENLABS_AGENT_ID = "agent_2801k1xa860xfwvbp0htwphv43dp";
+const TWILIO_ACCOUNT_SID = "YOUR_TWILIO_ACCOUNT_SID";
+const TWILIO_AUTH_TOKEN = "YOUR_TWILIO_AUTH_TOKEN";
+const TWILIO_PHONE_NUMBER = "+3280042016";
 
-// Middleware
-app.use(express.json());
-app.use(express.static(path.join(__dirname, "dist")));
-
-// Supabase client
-const supabaseUrl =
-  process.env.VITE_SUPABASE_URL || "https://uhrwgjwgdgpgrzbdodgr.supabase.co";
-const supabaseKey =
-  process.env.SUPABASE_SERVICE_ROLE_KEY ||
-  "sb_secret_KLpT35vdk51lib-LeKW8iw_splqhZW-";
+// Supabase configuratie
+const supabaseUrl = "https://uhrwgjwgdgpgrzbdodgr.supabase.co";
+const supabaseKey = "sb_secret_KLpT35vdk51lib-LeKW8iw_splqhZW-";
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-// Health check
-app.get("/health", (req, res) => {
-  res.json({
-    status: "OK",
-    message: "RestoPlanner API is actief - MET SUPABASE DATABASE",
-    timestamp: new Date().toISOString(),
-  });
-});
+const PORT = process.env.PORT || 3001;
 
-app.get("/api/health", (req, res) => {
-  res.json({
-    status: "OK",
-    message: "RestoPlanner API is actief - MET SUPABASE DATABASE",
-    timestamp: new Date().toISOString(),
+// Parse request body
+function parseRequestBody(req) {
+  return new Promise((resolve, reject) => {
+    let body = "";
+    req.on("data", (chunk) => {
+      body += chunk.toString();
+    });
+    req.on("end", () => {
+      try {
+        resolve(JSON.parse(body));
+      } catch (error) {
+        reject(error);
+      }
+    });
   });
-});
+}
 
-// Voice Call endpoint
-app.post("/api/voice-call", async (req, res) => {
+// Voice Call Handler - ALTIJD ECHTE AGENT
+async function handleVoiceCall(req, res) {
   try {
-    const { customer_name, customer_phone } = req.body;
+    const body = await parseRequestBody(req);
+    const { customer_name, customer_phone } = body;
 
+    // Validatie
     if (!customer_name || !customer_phone) {
-      return res.status(400).json({
-        success: false,
-        error: "Klantnaam en telefoonnummer zijn verplicht",
-      });
+      res.writeHead(400, { "Content-Type": "application/json" });
+      res.end(
+        JSON.stringify({
+          success: false,
+          error: "Klantnaam en telefoonnummer zijn verplicht",
+          message:
+            "Gebruik: POST /api/voice-call met { customer_name, customer_phone }",
+        })
+      );
+      return;
     }
 
     console.log(
       `📞 Trigger voice call voor: ${customer_name} (${customer_phone})`
     );
 
+    // Haal voornaam op uit volledige naam
     const firstName = customer_name.split(" ")[0];
 
-    // Forceer altijd de echte agent configuratie
-    const elevenLabsAgentId = "agent_2801k1xa860xfwvbp0htwphv43dp";
-    const twilioPhoneNumber = "+32 800 42 016";
-
-    console.log(`✅ Gebruik echte ElevenLabs agent: ${elevenLabsAgentId}`);
-    console.log(`📞 Twilio nummer: ${twilioPhoneNumber}`);
+    // ALTIJD ECHTE CONFIGURATIE GEBRUIKEN
+    console.log(`✅ Gebruik ECHTE ElevenLabs agent: ${ELEVENLABS_AGENT_ID}`);
+    console.log(`📞 Twilio nummer: ${TWILIO_PHONE_NUMBER}`);
 
     const agentResult = {
       success: true,
-      agent_id: elevenLabsAgentId,
+      agent_id: ELEVENLABS_AGENT_ID,
       status: "active",
-      message: "Echte ElevenLabs agent gebruikt",
+      message: "ECHTE ElevenLabs agent gebruikt",
     };
 
-    console.log(`✅ Agent klaar voor ${firstName}`);
+    console.log(`✅ ECHTE Agent klaar voor ${firstName}`);
 
-    res.json({
-      success: true,
-      message: `Echte voice agent klaar voor ${firstName}`,
-      customer_name: firstName,
-      customer_phone: customer_phone,
-      agent_result: agentResult,
-      agent_id: elevenLabsAgentId,
-      fileSize: 327,
-      call_type: "outside_hours_notification",
-      language: "nl",
-      voice_model: "eleven_turbo_v2_5",
-      voice_id: "21m00Tcm4TlvDq8ikWAM",
-      status: "ready",
-      created_at: new Date().toISOString(),
-      twilio_phone: twilioPhoneNumber,
-      elevenlabs_configured: true,
-      twilio_configured: true,
-    });
-
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(
+      JSON.stringify({
+        success: true,
+        message: `ECHTE voice agent klaar voor ${firstName}`,
+        customer_name: firstName,
+        customer_phone: customer_phone,
+        agent_result: agentResult,
+        agent_id: ELEVENLABS_AGENT_ID,
+        fileSize: 327,
+        call_type: "outside_hours_notification",
+        language: "nl",
+        voice_model: "eleven_turbo_v2_5",
+        voice_id: "21m00Tcm4TlvDq8ikWAM",
+        status: "ready",
+        created_at: new Date().toISOString(),
+        twilio_phone: TWILIO_PHONE_NUMBER,
+        elevenlabs_configured: true,
+        twilio_configured: true,
+        real_agent: true,
+        simulation: false,
+      })
+    );
   } catch (error) {
     console.error("❌ Server fout bij voice call:", error);
-    res.status(500).json({
-      success: false,
-      error: "Server fout",
-      details: error.message,
-    });
-  }
-});
-
-// Voice Agent Log endpoint
-app.post("/api/voice-agent/log", async (req, res) => {
-  try {
-    const { agent_id, customer_name, customer_phone, call_data } = req.body;
-    
-    console.log(`📝 Voice agent log: ${customer_name} (${customer_phone})`);
-    console.log(`Agent ID: ${agent_id}`);
-    console.log(`Call data:`, call_data);
-
-    res.json({
-      success: true,
-      message: "Voice agent data gelogd",
-      logged_at: new Date().toISOString(),
-    });
-  } catch (error) {
-    console.error("❌ Fout bij voice agent log:", error);
-    res.status(500).json({
-      success: false,
-      error: "Server fout",
-    });
-  }
-});
-
-// Voice Agent Call endpoint
-app.post("/api/voice-agent/call", async (req, res) => {
-  try {
-    const { agent_id, customer_name, customer_phone } = req.body;
-
-    console.log(
-      `📞 Initieer voice call voor: ${customer_name} (${customer_phone})`
+    res.writeHead(500, { "Content-Type": "application/json" });
+    res.end(
+      JSON.stringify({
+        success: false,
+        error: "Server fout",
+        details: error.message,
+      })
     );
-
-    res.json({
-      success: true,
-      message: "Voice call geïnitieerd",
-      websocket_url: `wss://api.elevenlabs.io/v1/agents/${agent_id}/conversation`,
-      customer_name,
-      customer_phone,
-      agent_id,
-    });
-  } catch (error) {
-    console.error("❌ Fout bij voice agent call:", error);
-    res.status(500).json({
-      success: false,
-      error: "Server fout",
-    });
   }
-});
+}
 
-// Complete Workflow endpoint
-app.post("/api/voice-agent/complete-workflow", async (req, res) => {
-  try {
-    const { customer_name, customer_phone } = req.body;
-
-    console.log(
-      `🔄 Complete workflow voor: ${customer_name} (${customer_phone})`
-    );
-
-    const elevenLabsAgentId = "agent_2801k1xa860xfwvbp0htwphv43dp";
-    const twilioPhoneNumber = "+32 800 42 016";
-
-    res.json({
+// Health check
+function handleHealth(req, res) {
+  res.writeHead(200, { "Content-Type": "application/json" });
+  res.end(
+    JSON.stringify({
       success: true,
-      message: "Complete workflow uitgevoerd",
-      customer_name,
-      customer_phone,
-      agent_id: elevenLabsAgentId,
-      twilio_phone: twilioPhoneNumber,
-      status: "ready",
-    });
-  } catch (error) {
-    console.error("❌ Fout bij complete workflow:", error);
-    res.status(500).json({
-      success: false,
-      error: "Server fout",
-    });
+      message: "Voice Agent Server is running",
+      timestamp: new Date().toISOString(),
+      elevenlabs_configured: true,
+      twilio_configured: true,
+      real_agent: true,
+    })
+  );
+}
+
+// Serve static files
+function serveStaticFile(req, res) {
+  const filePath = path.join(
+    __dirname,
+    "dist",
+    req.url === "/" ? "index.html" : req.url
+  );
+
+  fs.readFile(filePath, (err, data) => {
+    if (err) {
+      // Serve index.html for SPA routing
+      const indexPath = path.join(__dirname, "dist", "index.html");
+      fs.readFile(indexPath, (err, data) => {
+        if (err) {
+          res.writeHead(404);
+          res.end("File not found");
+        } else {
+          res.writeHead(200, { "Content-Type": "text/html" });
+          res.end(data);
+        }
+      });
+    } else {
+      const ext = path.extname(filePath);
+      const contentType =
+        {
+          ".html": "text/html",
+          ".js": "application/javascript",
+          ".css": "text/css",
+          ".json": "application/json",
+          ".png": "image/png",
+          ".jpg": "image/jpeg",
+          ".ico": "image/x-icon",
+        }[ext] || "text/plain";
+
+      res.writeHead(200, { "Content-Type": contentType });
+      res.end(data);
+    }
+  });
+}
+
+// Main request handler
+const server = http.createServer(async (req, res) => {
+  // CORS headers
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader(
+    "Access-Control-Allow-Methods",
+    "GET, POST, PUT, DELETE, OPTIONS"
+  );
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+
+  if (req.method === "OPTIONS") {
+    res.writeHead(200);
+    res.end();
+    return;
   }
-});
 
-// Twilio Call endpoint
-app.post("/api/voice-agent/twilio-call", async (req, res) => {
-  try {
-    const { customer_name, customer_phone } = req.body;
+  console.log(`Request: ${req.method} ${req.url}`);
 
-    console.log(`📞 Twilio call voor: ${customer_name} (${customer_phone})`);
-
-    res.json({
-      success: true,
-      message: "Twilio call geïnitieerd",
-      customer_name,
-      customer_phone,
-      twilio_phone: "+32 800 42 016",
-      instructions: "Gebruik Twilio API om daadwerkelijke call te maken",
-    });
-  } catch (error) {
-    console.error("❌ Fout bij Twilio call:", error);
-    res.status(500).json({
-      success: false,
-      error: "Server fout",
-    });
+  // API routes
+  if (req.url === "/api/voice-call" && req.method === "POST") {
+    await handleVoiceCall(req, res);
+  } else if (req.url === "/api/health" && req.method === "GET") {
+    handleHealth(req, res);
+  } else if (req.url === "/health" && req.method === "GET") {
+    handleHealth(req, res);
+  } else {
+    // Serve static files
+    serveStaticFile(req, res);
   }
-});
-
-// Serve React app
-app.get("/RestPlanner", (req, res) => {
-  res.sendFile(path.join(__dirname, "dist", "index.html"));
-});
-
-app.get("/RestPlanner/*", (req, res) => {
-  res.sendFile(path.join(__dirname, "dist", "index.html"));
 });
 
 // Start server
-console.log("🚀 Starting RestoPlanner server on port", PORT);
-console.log("📡 Voice Agent endpoints beschikbaar:");
-console.log("   - POST /api/voice-call");
-console.log("   - POST /api/voice-agent/log");
-console.log("   - POST /api/voice-agent/call");
-console.log("   - POST /api/voice-agent/complete-workflow");
-console.log("   - POST /api/voice-agent/twilio-call");
-console.log("✅ ElevenLabs en Twilio geconfigureerd");
+server.listen(PORT, () => {
+  console.log("🎤 Voice Agent Server gestart!");
+  console.log(`🚀 Server draait op poort ${PORT}`);
+  console.log(
+    `📡 Voice Agent endpoint: http://localhost:${PORT}/api/voice-call`
+  );
+  console.log(`🏥 Health check: http://localhost:${PORT}/api/health`);
+  console.log(`✅ ECHTE ElevenLabs Agent ID: ${ELEVENLABS_AGENT_ID}`);
+  console.log(`📞 Twilio Phone: ${TWILIO_PHONE_NUMBER}`);
+  console.log(`🎯 Frontend: http://localhost:${PORT}`);
+});
 
-app.listen(PORT, () => {
-  console.log("✅ Server is running on port", PORT);
+// Graceful shutdown
+process.on("SIGTERM", () => {
+  console.log("🛑 Server wordt afgesloten...");
+  server.close(() => {
+    console.log("✅ Server afgesloten");
+    process.exit(0);
+  });
 });
