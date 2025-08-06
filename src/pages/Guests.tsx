@@ -14,6 +14,7 @@ import { Header } from "@/components/layout/Header";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { useRestaurants } from "@/hooks/useRestaurants";
 import {
+  useCustomers,
   useDeleteAllCustomers,
   useSearchCustomers,
 } from "@/hooks/useCustomers";
@@ -77,7 +78,6 @@ export default function Guests() {
   }
   console.log("Debug - Edit modal open:", editModalOpen);
   console.log("Debug - Editing customer:", editingCustomer);
-  console.log("Debug - No customers variable used"); // Force cache refresh
 
   const recentCustomers = displayCustomers
     .filter((customer) => customer.last_visit)
@@ -126,7 +126,7 @@ export default function Guests() {
                       <Button
                         variant="destructive"
                         size="sm"
-                        disabled={displayCustomers.length === 0}
+                        disabled={customers.length === 0}
                       >
                         <Trash2 className="h-4 w-4 mr-2" />
                         Alle Gasten Verwijderen
@@ -139,7 +139,7 @@ export default function Guests() {
                         </AlertDialogTitle>
                         <AlertDialogDescription>
                           Deze actie kan niet ongedaan worden gemaakt. Dit zal
-                          permanent alle {displayCustomers.length} gasten verwijderen
+                          permanent alle {customers.length} gasten verwijderen
                           uit uw database.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
@@ -175,7 +175,7 @@ export default function Guests() {
                   <Users className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{displayCustomers.length}</div>
+                  <div className="text-2xl font-bold">{customers.length}</div>
                 </CardContent>
               </Card>
 
@@ -189,7 +189,7 @@ export default function Guests() {
                 <CardContent>
                   <div className="text-2xl font-bold">
                     {
-                      displayCustomers.filter((c) => {
+                      customers.filter((c) => {
                         const createdDate = new Date(c.created_at);
                         const now = new Date();
                         return (

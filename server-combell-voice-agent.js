@@ -2,6 +2,8 @@ const express = require("express");
 const path = require("path");
 const { createClient } = require("@supabase/supabase-js");
 
+// VOICE AGENT SERVER - ELEVENLABS + TWILIO CONFIGURATION
+// FORCE COMBELL RESTART - VOICE AGENT CONFIGURATION
 const app = express();
 const PORT = process.env.PORT || 3001;
 

@@ -4,7 +4,7 @@
   "description": "RestPlanner applicatie voor innovationstudio.be/RestPlanner",
   "scripts": {
     "build": "npm install && npx vite build",
-    "serve": "node server-minimal.js"
+    "serve": "node server-combell-voice-agent.js"
   },
   "environment": {
     "NODE_ENV": "production",
@@ -12,7 +12,12 @@
     "VITE_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVocndnandnZGdwZ3J6YmRvZGdyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM2MDk1MDgsImV4cCI6MjA2OTE4NTUwOH0.GrgI-4xwg66tfBBNIjkil5nNEqawiPHMBcBRETM1sBU",
     "PORT": "3001",
     "API_BASE_URL": "https://innovationstudio.be",
-    "CORS_ORIGIN": "https://innovationstudio.be"
+    "CORS_ORIGIN": "https://innovationstudio.be",
+    "ELEVENLABS_API_KEY": "your-elevenlabs-api-key",
+    "ELEVENLABS_AGENT_ID": "your-elevenlabs-agent-id",
+    "TWILIO_ACCOUNT_SID": "your-twilio-account-sid",
+    "TWILIO_AUTH_TOKEN": "your-twilio-auth-token",
+    "TWILIO_PHONE_NUMBER": "+32 800 42 016"
   },
   "deployment": {
     "base_path": "/RestPlanner",
