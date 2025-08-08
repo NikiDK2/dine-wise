@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="nl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>RestoPlanner - Verplaatst</title>
+    <meta
+      http-equiv="refresh"
+      content="0; url=https://innovatiostudio.be/restoplanner"
+    />
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        margin: 0;
+        padding: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        color: white;
+      }
+      .container {
+        text-align: center;
+        background: rgba(255, 255, 255, 0.1);
+        padding: 3rem;
+        border-radius: 20px;
+        backdrop-filter: blur(10px);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        max-width: 500px;
+      }
+      h1 {
+        margin-bottom: 1rem;
+        font-size: 2.5rem;
+        font-weight: 700;
+      }
+      p {
+        margin-bottom: 2rem;
+        font-size: 1.1rem;
+        line-height: 1.6;
+      }
+      .redirect-link {
+        display: inline-block;
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+        text-decoration: none;
+        padding: 1rem 2rem;
+        border-radius: 50px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+      }
+      .redirect-link:hover {
+        background: rgba(255, 255, 255, 0.3);
+        transform: translateY(-2px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+      }
+      .spinner {
+        width: 40px;
+        height: 40px;
+        border: 4px solid rgba(255, 255, 255, 0.3);
+        border-top: 4px solid white;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin: 2rem auto;
+      }
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🔄 RestoPlanner Verplaatst</h1>
+      <p>
+        RestoPlanner is verplaatst naar een nieuwe locatie. Je wordt automatisch
+        doorgestuurd naar de nieuwe website.
+      </p>
+      <div class="spinner"></div>
+      <p>
+        <strong>Nieuwe URL:</strong><br />
+        <a href="https://innovatiostudio.be/restoplanner" class="redirect-link">
+          https://innovatiostudio.be/restoplanner
+        </a>
+      </p>
+      <p style="font-size: 0.9rem; opacity: 0.8">
+        Als je niet automatisch wordt doorgestuurd, klik dan op de link
+        hierboven.
+      </p>
+    </div>
+  </body>
+</html>

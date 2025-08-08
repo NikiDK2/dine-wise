@@ -170,6 +170,12 @@ const server = http.createServer(async (req, res) => {
 
   // Serve static files
   let filePath = req.url;
+
+  // Handle /restoplanner subdirectory
+  if (filePath.startsWith("/restoplanner")) {
+    filePath = filePath.replace("/restoplanner", "");
+  }
+
   if (filePath === "/" || filePath === "") {
     filePath = "/index.html";
   }
@@ -445,7 +451,9 @@ async function handleCheckAvailability(req, res) {
 
     // Check of restaurant gesloten is op deze dag (nieuw formaat)
     if (!dayHours || !dayHours.isOpen) {
-      const dayName = requestedDate.toLocaleDateString("nl-NL", { weekday: "long" });
+      const dayName = requestedDate.toLocaleDateString("nl-NL", {
+        weekday: "long",
+      });
       res.writeHead(400, { "Content-Type": "application/json" });
       res.end(
         JSON.stringify({
@@ -466,7 +474,10 @@ async function handleCheckAvailability(req, res) {
     let applicableTimeSlot = null;
 
     for (const slot of timeSlots) {
-      if (requestedTimeStr >= slot.openTime && requestedTimeStr <= slot.closeTime) {
+      if (
+        requestedTimeStr >= slot.openTime &&
+        requestedTimeStr <= slot.closeTime
+      ) {
         isWithinOpeningHours = true;
         applicableTimeSlot = slot;
         break;
@@ -474,8 +485,12 @@ async function handleCheckAvailability(req, res) {
     }
 
     if (!isWithinOpeningHours) {
-      const dayName = requestedDate.toLocaleDateString("nl-NL", { weekday: "long" });
-      const timeSlotsText = timeSlots.map(slot => `${slot.openTime}-${slot.closeTime}`).join(", ");
+      const dayName = requestedDate.toLocaleDateString("nl-NL", {
+        weekday: "long",
+      });
+      const timeSlotsText = timeSlots
+        .map((slot) => `${slot.openTime}-${slot.closeTime}`)
+        .join(", ");
       res.writeHead(400, { "Content-Type": "application/json" });
       res.end(
         JSON.stringify({
@@ -491,10 +506,15 @@ async function handleCheckAvailability(req, res) {
     }
 
     // Check of reservering nodig is voor dit tijdstip
-    const requiresReservation = checkIfReservationRequired(requestedTimeStr, dayHours);
-    
+    const requiresReservation = checkIfReservationRequired(
+      requestedTimeStr,
+      dayHours
+    );
+
     if (!requiresReservation) {
-      const dayName = requestedDate.toLocaleDateString("nl-NL", { weekday: "long" });
+      const dayName = requestedDate.toLocaleDateString("nl-NL", {
+        weekday: "long",
+      });
       res.writeHead(200, { "Content-Type": "application/json" });
       res.end(
         JSON.stringify({
@@ -508,7 +528,8 @@ async function handleCheckAvailability(req, res) {
           opening_hours: dayHours,
           day_of_week: dayName,
           message: `Reservering niet nodig voor ${requestedTimeStr} op ${dayName}. U kunt gewoon langskomen.`,
-          details: "Dit tijdstip valt buiten de drukke periodes. Reserveringen zijn niet verplicht.",
+          details:
+            "Dit tijdstip valt buiten de drukke periodes. Reserveringen zijn niet verplicht.",
         })
       );
       return;
@@ -523,7 +544,10 @@ async function handleCheckAvailability(req, res) {
     const largeGroupThreshold = settings.large_group_threshold || 6; // Groepen > 6 personen
 
     // Check tijdspecifieke groepsgrootte limieten
-    const timeSpecificMaxPartySize = getTimeSpecificMaxPartySize(requestedTimeStr, settings);
+    const timeSpecificMaxPartySize = getTimeSpecificMaxPartySize(
+      requestedTimeStr,
+      settings
+    );
     const effectiveMaxPartySize = timeSpecificMaxPartySize || maxPartySize;
 
     if (party_size < minPartySize || party_size > effectiveMaxPartySize) {
@@ -622,7 +646,10 @@ async function handleCheckAvailability(req, res) {
     const availableCapacity = totalCapacity - occupiedCapacity;
 
     // 7. Check tijdsspecifieke capaciteitslimieten
-    const timeSpecificMaxForSlot = getTimeSpecificMaxPartySize(requestedTimeStr, settings);
+    const timeSpecificMaxForSlot = getTimeSpecificMaxPartySize(
+      requestedTimeStr,
+      settings
+    );
     const currentTotalForTimeSlot = conflictingReservations.reduce(
       (sum, res) => sum + res.party_size,
       0
@@ -630,7 +657,10 @@ async function handleCheckAvailability(req, res) {
 
     // Check tijdsspecifieke limiet
     let timeSpecificLimitExceeded = false;
-    if (timeSpecificMaxForSlot && (currentTotalForTimeSlot + party_size) > timeSpecificMaxForSlot) {
+    if (
+      timeSpecificMaxForSlot &&
+      currentTotalForTimeSlot + party_size > timeSpecificMaxForSlot
+    ) {
       timeSpecificLimitExceeded = true;
     }
 
@@ -668,7 +698,8 @@ async function handleCheckAvailability(req, res) {
       return;
     }
 
-    const isAvailable = availableCapacity >= party_size && !timeSpecificLimitExceeded;
+    const isAvailable =
+      availableCapacity >= party_size && !timeSpecificLimitExceeded;
 
     const alternativeTimes = generateAlternativeTimes(requested_time, dayHours);
 
@@ -821,7 +852,9 @@ async function handleBookReservation(req, res) {
 
     // Check of restaurant gesloten is op deze dag (nieuw formaat)
     if (!dayHours || !dayHours.isOpen) {
-      const dayName = requestedDate.toLocaleDateString("nl-NL", { weekday: "long" });
+      const dayName = requestedDate.toLocaleDateString("nl-NL", {
+        weekday: "long",
+      });
       res.writeHead(400, { "Content-Type": "application/json" });
       res.end(
         JSON.stringify({
@@ -842,7 +875,10 @@ async function handleBookReservation(req, res) {
     let applicableTimeSlot = null;
 
     for (const slot of timeSlots) {
-      if (requestedTimeStr >= slot.openTime && requestedTimeStr <= slot.closeTime) {
+      if (
+        requestedTimeStr >= slot.openTime &&
+        requestedTimeStr <= slot.closeTime
+      ) {
         isWithinOpeningHours = true;
         applicableTimeSlot = slot;
         break;
@@ -850,8 +886,12 @@ async function handleBookReservation(req, res) {
     }
 
     if (!isWithinOpeningHours) {
-      const dayName = requestedDate.toLocaleDateString("nl-NL", { weekday: "long" });
-      const timeSlotRanges = timeSlots.map(slot => `${slot.openTime}-${slot.closeTime}`).join(", ");
+      const dayName = requestedDate.toLocaleDateString("nl-NL", {
+        weekday: "long",
+      });
+      const timeSlotRanges = timeSlots
+        .map((slot) => `${slot.openTime}-${slot.closeTime}`)
+        .join(", ");
       res.writeHead(400, { "Content-Type": "application/json" });
       res.end(
         JSON.stringify({
@@ -957,18 +997,22 @@ async function handleBookReservation(req, res) {
     const availableCapacity = totalCapacity - occupiedCapacity;
 
     // 7. Check tijdsspecifieke capaciteitslimieten
-    const timeSpecificMaxForSlot = getTimeSpecificMaxPartySize(reservation_time, settings);
-    
+    const timeSpecificMaxForSlot = getTimeSpecificMaxPartySize(
+      reservation_time,
+      settings
+    );
+
     // Haal alle reserveringen op voor het specifieke tijdstip (niet alleen overlappende)
     let allReservationsForTimeSlot = [];
     try {
-      const { data: allReservations, error: allReservationsError } = await supabase
-        .from("reservations")
-        .select("id, customer_name, reservation_time, party_size, status")
-        .eq("restaurant_id", restaurantId)
-        .eq("reservation_date", reservation_date)
-        .eq("reservation_time", reservation_time)
-        .not("status", "eq", "cancelled");
+      const { data: allReservations, error: allReservationsError } =
+        await supabase
+          .from("reservations")
+          .select("id, customer_name, reservation_time, party_size, status")
+          .eq("restaurant_id", restaurantId)
+          .eq("reservation_date", reservation_date)
+          .eq("reservation_time", reservation_time)
+          .not("status", "eq", "cancelled");
 
       if (!allReservationsError) {
         allReservationsForTimeSlot = allReservations || [];
@@ -981,8 +1025,9 @@ async function handleBookReservation(req, res) {
       (sum, res) => sum + res.party_size,
       0
     );
-    const remainingCapacityForTimeSlot = timeSpecificMaxForSlot ? 
-      (timeSpecificMaxForSlot - currentTotalForTimeSlot) : availableCapacity;
+    const remainingCapacityForTimeSlot = timeSpecificMaxForSlot
+      ? timeSpecificMaxForSlot - currentTotalForTimeSlot
+      : availableCapacity;
 
     // 8. Check of er voldoende capaciteit is (zowel totaal als tijdsspecifiek)
     if (availableCapacity < party_size) {
@@ -1009,7 +1054,10 @@ async function handleBookReservation(req, res) {
     }
 
     // Check tijdsspecifieke limiet
-    if (timeSpecificMaxForSlot && (currentTotalForTimeSlot + party_size) > timeSpecificMaxForSlot) {
+    if (
+      timeSpecificMaxForSlot &&
+      currentTotalForTimeSlot + party_size > timeSpecificMaxForSlot
+    ) {
       const alternativeTimes = generateAlternativeTimes(
         reservation_time,
         dayHours
@@ -1037,9 +1085,18 @@ async function handleBookReservation(req, res) {
     console.log(`  - Tijdsspecifieke max: ${timeSpecificMaxForSlot}`);
     console.log(`  - Huidige totaal voor tijdslot: ${currentTotalForTimeSlot}`);
     console.log(`  - Nieuwe reservering: ${party_size}`);
-    console.log(`  - Totaal na reservering: ${currentTotalForTimeSlot + party_size}`);
-    console.log(`  - Limiet overschreden: ${timeSpecificMaxForSlot && (currentTotalForTimeSlot + party_size) > timeSpecificMaxForSlot}`);
-    console.log(`  - Aantal reserveringen voor dit tijdstip: ${allReservationsForTimeSlot.length}`);
+    console.log(
+      `  - Totaal na reservering: ${currentTotalForTimeSlot + party_size}`
+    );
+    console.log(
+      `  - Limiet overschreden: ${
+        timeSpecificMaxForSlot &&
+        currentTotalForTimeSlot + party_size > timeSpecificMaxForSlot
+      }`
+    );
+    console.log(
+      `  - Aantal reserveringen voor dit tijdstip: ${allReservationsForTimeSlot.length}`
+    );
 
     // Check of dit een grote groep is (vereist handmatige goedkeuring)
     const isLargeGroupFinal = party_size > largeGroupThreshold;
@@ -1312,36 +1369,34 @@ function checkIfReservationRequired(requestedTimeStr, dayHours) {
   // Definieer drukke periodes waar reserveringen verplicht zijn
   const busyPeriods = [
     { start: "12:00", end: "14:00", name: "lunch" },
-    { start: "18:00", end: "22:00", name: "diner" }
+    { start: "18:00", end: "22:00", name: "diner" },
   ];
-  
+
   // Definieer rustige periodes waar geen reserveringen nodig zijn
-  const quietPeriods = [
-    { start: "14:00", end: "17:00", name: "middag" }
-  ];
-  
+  const quietPeriods = [{ start: "14:00", end: "17:00", name: "middag" }];
+
   const requestedTime = new Date(`2000-01-01T${requestedTimeStr}:00`);
-  
+
   // Check of het tijdstip in een drukke periode valt
   for (const period of busyPeriods) {
     const periodStart = new Date(`2000-01-01T${period.start}:00`);
     const periodEnd = new Date(`2000-01-01T${period.end}:00`);
-    
+
     if (requestedTime >= periodStart && requestedTime < periodEnd) {
       return true; // Reservering vereist
     }
   }
-  
+
   // Check of het tijdstip in een rustige periode valt
   for (const period of quietPeriods) {
     const periodStart = new Date(`2000-01-01T${period.start}:00`);
     const periodEnd = new Date(`2000-01-01T${period.end}:00`);
-    
+
     if (requestedTime >= periodStart && requestedTime < periodEnd) {
       return false; // Geen reservering nodig
     }
   }
-  
+
   // Voor alle andere tijden: reservering vereist (veilige standaard)
   return true;
 }
@@ -1349,8 +1404,8 @@ function checkIfReservationRequired(requestedTimeStr, dayHours) {
 // Helper functie om tijdspecifieke max party size op te halen
 function getTimeSpecificMaxPartySize(requestedTimeStr, settings) {
   const timeSlots = settings.time_specific_max_party_size || [];
-  const timeSlot = timeSlots.find(slot => {
-    const [openTime, closeTime] = slot.time_range.split('-');
+  const timeSlot = timeSlots.find((slot) => {
+    const [openTime, closeTime] = slot.time_range.split("-");
     return requestedTimeStr >= openTime && requestedTimeStr <= closeTime;
   });
 
@@ -1370,11 +1425,11 @@ function getTimeSlot(requestedTimeStr) {
     { time_range: "16:00-18:00", name: "Avond" },
     { time_range: "18:00-20:00", name: "Diner" },
     { time_range: "20:00-22:00", name: "Avond" },
-    { time_range: "22:00-00:00", name: "Nacht" }
+    { time_range: "22:00-00:00", name: "Nacht" },
   ];
 
-  const foundSlot = timeSlots.find(slot => {
-    const [openTime, closeTime] = slot.time_range.split('-');
+  const foundSlot = timeSlots.find((slot) => {
+    const [openTime, closeTime] = slot.time_range.split("-");
     return requestedTimeStr >= openTime && requestedTimeStr < closeTime;
   });
 

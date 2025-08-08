@@ -1,224 +1,156 @@
-# 🚀 Deployment Checklist - RestoPlanner Online
+# ✅ RestoPlanner Migratie Checklist
 
-## 📋 **Voorbereiding**
+## 🎯 Van innovationstudio.be naar innovatiostudio.be/restoplanner
 
-### ✅ **1. Environment Variables**
+### 📋 Pre-Deployment Checklist
 
-Maak een `.env` bestand aan op je server met:
+- [ ] **Code wijzigingen zijn gemaakt:**
 
-```bash
-# Supabase Configuration
-VITE_SUPABASE_URL=https://uhrwgjwgdgpgrzbdodgr.supabase.co
-VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVocndnandnZGdwZ3J6YmRvZGdyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM2MDk1MDgsImV4cCI6MjA2OTE4NTUwOH0.GrgI-4xwg66tfBBNIjkil5nNEqawiPHMBcBRETM1sBU
+  - [ ] `vite.config.ts` - `base: "/restoplanner/"`
+  - [ ] `src/App.tsx` - `basename="/restoplanner"`
+  - [ ] `server-minimal.js` - `/restoplanner` handling
+  - [ ] `INNOVATIOSTUDIO_DEPLOYMENT.md` - nieuwe deployment gids
+  - [ ] `redirect-old-domain.html` - redirect pagina
 
-# Server Configuration
-PORT=3001
-NODE_ENV=production
+- [ ] **Git repository is up-to-date:**
+  - [ ] Alle wijzigingen zijn gecommit
+  - [ ] Code is gepusht naar GitHub
+  - [ ] Branch is `main`
 
-# API Configuration
-API_BASE_URL=https://your-domain.com
-CORS_ORIGIN=https://your-domain.com
-```
+### 🚀 Deployment Stappen
 
-### ✅ **2. Build de Applicatie**
+#### **Stap 1: Nieuwe Combell Instance**
 
-```bash
-npm run build
-```
+- [ ] Log in op Combell dashboard
+- [ ] Ga naar Node.js sectie
+- [ ] Klik "Add instance" of "Nieuwe Node.js instance"
+- [ ] Configureer:
+  - [ ] Git Repository: `https://github.com/NikiDK2/dine-wise.git`
+  - [ ] Branch: `main`
+  - [ ] Build Command: `npm run build`
+  - [ ] Serve Command: `npm run serve`
+  - [ ] Base Path: `/restoplanner`
+  - [ ] Domain: `innovatiostudio.be`
 
-### ✅ **3. Upload Bestanden**
+#### **Stap 2: Environment Variables**
 
-Upload deze bestanden naar je server:
+- [ ] Voeg toe in Combell dashboard:
+  ```env
+  NODE_ENV=production
+  VITE_SUPABASE_URL=https://uhrwgjwgdgpgrzbdodgr.supabase.co
+  VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVocndnandnZGdwZ3J6YmRvZGdyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM2MDk1MDgsImV4cCI6MjA2OTE4NTUwOH0.GrgI-4xwg66tfBBNIjkil5nNEqawiPHMBcBRETM1sBU
+  PORT=3001
+  API_BASE_URL=https://innovatiostudio.be
+  CORS_ORIGIN=https://innovatiostudio.be
+  BASE_PATH=/restoplanner
+  ```
 
-- `dist/` (gebouwde frontend)
-- `server.js` (API server)
-- `src/api/agendaRoutes.js` (API routes)
-- `package.json` (dependencies)
-- `.env` (environment variables)
+#### **Stap 3: Domain Configuratie**
 
-## 🌐 **Deployment Opties**
+- [ ] Ga naar "Websites & SSL"
+- [ ] Voeg `innovatiostudio.be` toe aan Node.js instance
+- [ ] Activeer SSL certificaat voor `innovatiostudio.be`
 
-### **Optie 1: Vercel (Aanbevolen)**
+#### **Stap 4: Deploy**
 
-```bash
-# Installeer Vercel CLI
-npm i -g vercel
+- [ ] Klik "Deploy" in Combell dashboard
+- [ ] Wacht tot build succesvol is
+- [ ] Controleer of app start zonder errors
 
-# Deploy
-vercel --prod
-```
+### 🧪 Testing Checklist
 
-### **Optie 2: Combell VPS**
+#### **Frontend Testing**
 
-```bash
-# SSH naar je server
-ssh user@your-server.com
+- [ ] **Homepage laadt:** `https://innovatiostudio.be/restoplanner`
+- [ ] **React Router werkt:** Navigatie tussen pagina's
+- [ ] **Assets laden:** CSS, JS, afbeeldingen
+- [ ] **Responsive design:** Werkt op mobile/desktop
 
-# Upload bestanden
-scp -r dist/ user@your-server.com:/var/www/restoplanner/
-scp server.js user@your-server.com:/var/www/restoplanner/
-scp package.json user@your-server.com:/var/www/restoplanner/
+#### **API Testing**
 
-# Installeer dependencies
-cd /var/www/restoplanner
-npm install --production
+- [ ] **Health check:** `https://innovatiostudio.be/restoplanner/health`
+- [ ] **Agenda API:** `https://innovatiostudio.be/restoplanner/api/agenda/health`
+- [ ] **Reservations API:** `https://innovatiostudio.be/restoplanner/api/reservations/check-availability`
 
-# Start met PM2
-pm2 start server.js --name "restoplanner"
-pm2 save
-pm2 startup
-```
+#### **Database Testing**
 
-### **Optie 3: Docker**
+- [ ] **Supabase connectie:** App kan data ophalen
+- [ ] **Reservations:** Nieuwe reserveringen kunnen worden aangemaakt
+- [ ] **Restaurant data:** Restaurant instellingen laden
 
-```dockerfile
-FROM node:18-alpine
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci --only=production
-COPY dist/ ./dist/
-COPY server.js ./
-COPY src/api/ ./src/api/
-EXPOSE 3001
-CMD ["node", "server.js"]
-```
+### 🔄 Oude Domein Afhandeling
 
-## 🔧 **Server Configuratie**
+#### **Option A: Redirect (Aanbevolen)**
 
-### **Nginx Configuratie**
+- [ ] Upload `redirect-old-domain.html` naar `innovationstudio.be`
+- [ ] Test redirect: `innovationstudio.be` → `innovatiostudio.be/restoplanner`
+- [ ] Controleer of alle oude links werken
 
-```nginx
-server {
-    listen 80;
-    server_name your-domain.com;
+#### **Option B: DNS Redirect**
 
-    location / {
-        proxy_pass http://localhost:3001;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_cache_bypass $http_upgrade;
-    }
-}
-```
+- [ ] Configureer DNS redirect in Combell
+- [ ] `innovationstudio.be/*` → `innovatiostudio.be/restoplanner/*`
 
-### **SSL Certificaat (Let's Encrypt)**
+### 📊 Post-Deployment Monitoring
 
-```bash
-sudo certbot --nginx -d your-domain.com
-```
+#### **Performance Monitoring**
 
-## 🧪 **Test Checklist**
+- [ ] **Page load times:** < 3 seconden
+- [ ] **API response times:** < 1 seconde
+- [ ] **Error rates:** < 1%
+- [ ] **Uptime:** > 99.9%
 
-### ✅ **Frontend Tests**
+#### **User Experience**
 
-- [ ] Website laadt correct
-- [ ] Login werkt
-- [ ] Floor plan toont correct
-- [ ] Reservaties kunnen gemaakt worden
+- [ ] **Mobile responsive:** Werkt op alle devices
+- [ ] **Browser compatibility:** Chrome, Firefox, Safari, Edge
+- [ ] **Accessibility:** Screen readers, keyboard navigation
 
-### ✅ **API Tests**
+### 🛠️ Troubleshooting
 
-```bash
-# Health check
-curl https://your-domain.com/health
+#### **Common Issues**
 
-# API test
-curl -X POST https://your-domain.com/api/agenda/check-availability \
-  -H "Content-Type: application/json" \
-  -d '{"restaurant_id":"test","date":"2024-01-15","time":"19:00","party_size":4}'
-```
+- [ ] **404 errors:** Controleer base path configuratie
+- [ ] **Static files not loading:** Controleer Vite base URL
+- [ ] **React Router not working:** Controleer basename
+- [ ] **API errors:** Controleer environment variables
 
-### ✅ **Make.com Integratie**
+#### **Debug Steps**
 
-- [ ] API endpoints bereikbaar
-- [ ] Authenticatie werkt
-- [ ] Data wordt correct opgeslagen
+- [ ] Check Combell logs voor errors
+- [ ] Test API endpoints direct
+- [ ] Controleer browser console voor errors
+- [ ] Verify Supabase connection
 
-## 🔍 **Monitoring**
+### 🎉 Final Steps
 
-### **Logs Bekijken**
+#### **Verificatie**
 
-```bash
-# PM2 logs
-pm2 logs restoplanner
+- [ ] **Alles werkt:** Frontend + Backend + Database
+- [ ] **Performance OK:** Geen performance issues
+- **Security OK:** SSL certificaat actief
+- [ ] **SEO OK:** Meta tags, sitemap
 
-# Nginx logs
-sudo tail -f /var/log/nginx/access.log
-sudo tail -f /var/log/nginx/error.log
-```
+#### **Documentatie**
 
-### **Performance Monitoring**
+- [ ] **Update README:** Nieuwe URL vermelden
+- [ ] **Update API docs:** Nieuwe endpoints
+- [ ] **Update Make.com:** Nieuwe API URL's
 
-```bash
-# Server resources
-htop
-df -h
-free -h
+#### **Communicatie**
 
-# Node.js process
-pm2 monit
-```
+- [ ] **Informeer gebruikers:** Over nieuwe URL
+- [ ] **Update bookmarks:** In browser
+- [ ] **Update links:** Op social media, websites
 
-## 🚨 **Troubleshooting**
+### ✅ Success Criteria
 
-### **Veelvoorkomende Problemen**
+- [ ] **Nieuwe URL werkt:** `https://innovatiostudio.be/restoplanner`
+- [ ] **Alle functionaliteit:** Reservations, agenda, etc.
+- [ ] **Performance:** Snelle laadtijden
+- [ ] **SEO:** Geen broken links
+- [ ] **User experience:** Soepel gebruik
 
-#### **1. Supabase Connectie Fout**
+---
 
-```bash
-# Controleer environment variables
-echo $VITE_SUPABASE_URL
-echo $VITE_SUPABASE_ANON_KEY
-```
-
-#### **2. CORS Errors**
-
-```bash
-# Controleer CORS_ORIGIN in .env
-echo $CORS_ORIGIN
-```
-
-#### **3. Port Niet Beschikbaar**
-
-```bash
-# Controleer welke processen poort 3001 gebruiken
-lsof -i :3001
-```
-
-#### **4. Build Errors**
-
-```bash
-# Schone build
-rm -rf dist node_modules
-npm install
-npm run build
-```
-
-## 📞 **Support**
-
-### **Combell Support**
-
-- **Email:** support@combell.com
-- **Telefoon:** +32 2 259 89 89
-- **Chat:** Via Combell dashboard
-
-### **Supabase Support**
-
-- **Documentatie:** https://supabase.com/docs
-- **Discord:** https://discord.supabase.com
-
-## ✅ **Deployment Voltooid**
-
-Na deze checklist zou je applicatie volledig online moeten werken met:
-
-- ✅ Frontend op je domain
-- ✅ API endpoints beschikbaar
-- ✅ Supabase connectie werkend
-- ✅ Make.com integratie mogelijk
-- ✅ SSL certificaat actief
-- ✅ Monitoring ingesteld
+**🎉 Migratie succesvol wanneer alle items zijn afgevinkt!**
